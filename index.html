@@ -8,7 +8,7 @@
     />
     <title>麻雀スコアPWA</title>
     <link rel="stylesheet" href="style.css" />
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.json" />
   </head>
   <body>
     <!-- 画面1：参加人数・メンバー登録画面（変更なし） -->
@@ -195,101 +195,142 @@
     <!-- 画面3：対局中メイン画面（変更なし） -->
     <!-- 画面3：対局中メイン画面（画面3全体をこちらに差し替えてください） -->
     <div id="screen-match" class="screen flex-column justify-between hidden">
-      <div class="scroll-box-match">
-        <!-- 上部局情報 -->
-        <div class="card flex justify-between items-center mb-2 bg-dark-header">
-          <div>
-            <!-- 東・南、局数、本場にそれぞれ個別のidを付与 -->
-            <span
-              id="current-wind-label"
-              class="text-2xl font-black text-emerald"
-              >東</span
+      <!-- 上部局情報 -->
+      <div class="card flex justify-between items-center mb-2 bg-dark-header">
+        <div>
+          <!-- 東・南、局数、本場にそれぞれ個別のidを付与 -->
+          <span id="current-wind-label" class="text-2xl font-black text-emerald"
+            >東</span
+          >
+          <span id="current-kyoku-num" class="text-2xl font-black text-emerald"
+            >1</span
+          >
+          <span class="text-2xl font-black text-emerald">局</span>
+          <span id="current-honba" class="badge-honba">0 本場</span>
+        </div>
+        <div class="kyotaku-box">
+          <span class="kyotaku-label">供託</span
+          ><span id="current-kyotaku" class="kyotaku-value">0 本</span>
+        </div>
+      </div>
+
+      <!-- サイコロ & 配牌ナビ -->
+      <div class="card-sub flex items-center justify-between mb-2">
+        <button onclick="rollDice()" class="btn-dice">🎲 サイコロ</button>
+        <div class="text-right flex-1 pl-3">
+          <p id="dice-result" class="dice-text">出目: --</p>
+          <p id="haipai-navi" class="navi-text">山取り位置ナビ</p>
+        </div>
+      </div>
+
+      <!-- プレイヤー情報（ここにアガリ対象者をドラッグドロップできるようにします） -->
+      <div class="card p-0 mb-2 overflow-hidden">
+        <div class="card-header text-center">
+          現在の持ち点（和了・放銃のドロップ先）
+        </div>
+        <div id="match-players-list" class="table-rows">
+          <!-- JSで東・南・西・北の点数ボックスとドロップエリアが生成されます -->
+        </div>
+      </div>
+
+      <!-- ★新設：直感型アガリ計算・点数授受パネル -->
+      <!-- ★新設：直感型アガリ計算・点数授受パネル（ご指定の並び順版） -->
+      <div class="card mb-2 bg-panel">
+        <div class="drag-instruction text-emerald">✨ 直感精算パネル:</div>
+
+        <!-- 1. 役割枠（ Winner / Loser ドロップエリア） -->
+        <div class="flex justify-between gap-2 mb-2">
+          <div id="role-winner-box" class="role-box winner-target">
+            <span id="role-winner-label" class="role-label"
+              >🏆 和了者 (アガリ)</span
             >
-            <span
-              id="current-kyoku-num"
-              class="text-2xl font-black text-emerald"
-              >1</span
+            <div class="role-slot" id="slot-winner">
+              ここにプレイヤーをドロップ
+            </div>
+          </div>
+          <div id="role-loser-box" class="role-box loser-target">
+            <span id="role-loser-label" class="role-label"
+              >🎯 放銃者 (ロンの場合)</span
             >
-            <span class="text-2xl font-black text-emerald">局</span>
-            <span id="current-honba" class="badge-honba">0 本場</span>
-          </div>
-          <div class="kyotaku-box">
-            <span class="kyotaku-label">供託</span
-            ><span id="current-kyotaku" class="kyotaku-value">0 本</span>
+            <div class="role-slot" id="slot-loser">
+              ここにプレイヤーをドロップ
+            </div>
           </div>
         </div>
 
-        <!-- サイコロ & 配牌ナビ -->
-        <div class="card-sub flex items-center justify-between mb-2">
-          <button onclick="rollDice()" class="btn-dice">🎲 サイコロ</button>
-          <div class="text-right flex-1 pl-3">
-            <p id="dice-result" class="dice-text">出目: --</p>
-            <p id="haipai-navi" class="navi-text">山取り位置ナビ</p>
+        <!-- 2. アクション選択（ロン・ツモ・聴牌・クリアを横一列に集約） -->
+        <div class="flex gap-2 mb-2">
+          <button
+            id="btn-agari-ron"
+            onclick="setAgariType('ron')"
+            class="btn-type active"
+          >
+            ロン
+          </button>
+          <button
+            id="btn-agari-tsumo"
+            onclick="setAgariType('tsumo')"
+            class="btn-type"
+          >
+            ツモ
+          </button>
+          <button
+            id="btn-agari-tenpai"
+            onclick="setAgariType('tenpai')"
+            class="btn-type text-amber-btn"
+          >
+            聴牌
+          </button>
+          <button onclick="clearRoleSlots()" class="btn-clear">クリア</button>
+        </div>
+
+        <!-- 3. 点数詳細選択（アクションで選んだあとに細かく決めるエリア） -->
+        <div id="panel-scale-box" class="calc-selector-box mb-2">
+          <label class="input-label-sm">【満貫クラス】</label>
+          <div class="flex-wrap-gap">
+            <button onclick="selectManganScale('mangan')" class="btn-scale">
+              満貫
+            </button>
+            <button onclick="selectManganScale('hanman')" class="btn-scale">
+              跳満
+            </button>
+            <button onclick="selectManganScale('baiman')" class="btn-scale">
+              倍満
+            </button>
+            <button onclick="selectManganScale('sanbaiman')" class="btn-scale">
+              3倍満
+            </button>
+            <button onclick="selectManganScale('yakuman')" class="btn-scale">
+              役満
+            </button>
           </div>
         </div>
 
-        <!-- プレイヤー情報（ここにアガリ対象者をドラッグドロップできるようにします） -->
-        <div class="card p-0 mb-2 overflow-hidden">
-          <div class="card-header text-center">
-            現在の持ち点（和了・放銃のドロップ先）
-          </div>
-          <div id="match-players-list" class="table-rows">
-            <!-- JSで東・南・西・北の点数ボックスとドロップエリアが生成されます -->
-          </div>
-        </div>
-
-        <!-- ★新設：直感型アガリ計算・点数授受パネル -->
-<!-- ★新設：直感型アガリ計算・点数授受パネル（ご指定の並び順版） -->
-<div class="card mb-2 bg-panel">
-    <div class="drag-instruction text-emerald">✨ 直感精算パネル:</div>
-    
-    <!-- 1. 役割枠（ Winner / Loser ドロップエリア） -->
-    <div class="flex justify-between gap-2 mb-2">
-        <div id="role-winner-box" class="role-box winner-target">
-            <span id="role-winner-label" class="role-label">🏆 和了者 (アガリ)</span>
-            <div class="role-slot" id="slot-winner">ここにプレイヤーをドロップ</div>
-        </div>
-        <div id="role-loser-box" class="role-box loser-target">
-            <span id="role-loser-label" class="role-label">🎯 放銃者 (ロンの場合)</span>
-            <div class="role-slot" id="slot-loser">ここにプレイヤーをドロップ</div>
-        </div>
-    </div>
-
-    <!-- 2. アクション選択（ロン・ツモ・聴牌・クリアを横一列に集約） -->
-    <div class="flex gap-2 mb-2">
-        <button id="btn-agari-ron" onclick="setAgariType('ron')" class="btn-type active">ロン</button>
-        <button id="btn-agari-tsumo" onclick="setAgariType('tsumo')" class="btn-type">ツモ</button>
-        <button id="btn-agari-tenpai" onclick="setAgariType('tenpai')" class="btn-type text-amber-btn">聴牌</button>
-        <button onclick="clearRoleSlots()" class="btn-clear">クリア</button>
-    </div>
-
-    <!-- 3. 点数詳細選択（アクションで選んだあとに細かく決めるエリア） -->
-    <div id="panel-scale-box" class="calc-selector-box mb-2">
-        <label class="input-label-sm">【満貫クラス】</label>
-        <div class="flex-wrap-gap">
-            <button onclick="selectManganScale('mangan')" class="btn-scale">満貫</button>
-            <button onclick="selectManganScale('hanman')" class="btn-scale">跳満</button>
-            <button onclick="selectManganScale('baiman')" class="btn-scale">倍満</button>
-            <button onclick="selectManganScale('sanbaiman')" class="btn-scale">3倍満</button>
-            <button onclick="selectManganScale('yakuman')" class="btn-scale">役満</button>
-        </div>
-    </div>
-
-    <div id="panel-detail-box" class="calc-selector-box">
-        <label class="input-label-sm">【翻・符で指定】</label>
-        <div class="flex items-center gap-2 mb-1">
+        <div id="panel-detail-box" class="calc-selector-box">
+          <label class="input-label-sm">【翻・符で指定】</label>
+          <div class="flex items-center gap-2 mb-1">
             <select id="select-han" class="inline-select-sm">
-                <option value="1">1翻</option><option value="2">2翻</option><option value="3">3翻</option><option value="4">4翻</option>
+              <option value="1">1翻</option>
+              <option value="2">2翻</option>
+              <option value="3">3翻</option>
+              <option value="4">4翻</option>
             </select>
             <select id="select-fu" class="inline-select-sm">
-                <option value="20">20符</option><option value="25">25符</option><option value="30" selected>30符</option><option value="40">40符</option><option value="50">50符</option><option value="60">60符</option>
+              <option value="20">20符</option>
+              <option value="25">25符</option>
+              <option value="30" selected>30符</option>
+              <option value="40">40符</option>
+              <option value="50">50符</option>
+              <option value="60">60符</option>
             </select>
+          </div>
         </div>
-    </div>
-    
-    <!-- 4. 実行決済ボタン -->
-    <button onclick="executePointTransfer()" class="btn-execute mt-2">⚡ 計算して点数を移動する</button>
-</div>
+
+        <!-- 4. 実行決済ボタン -->
+        <button onclick="executePointTransfer()" class="btn-execute mt-2">
+          ⚡ 計算して点数を移動する
+        </button>
+      </div>
 
       <div class="pt-2 mb-2">
         <button onclick="endMatch()" class="btn btn-rose">
@@ -297,7 +338,6 @@
         </button>
       </div>
     </div>
-
     <!-- 画面4：着順とポイント画面（変更なし） -->
     <div id="screen-result" class="screen flex-column justify-between hidden">
       <div>

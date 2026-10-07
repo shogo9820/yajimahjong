@@ -1,0 +1,562 @@
+/* 基本設定 */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    background-color: #0f172a; /* 深みのあるダークブルー */
+    color: #e2e8f0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    min-height: 100vh;
+    padding: 16px;
+    max-width: 440px;
+    margin: 0 auto;
+}
+
+/* 画面と遷移制御 */
+.screen {
+    width: 100%;
+    min-height: calc(100vh - 32px);
+    display: flex;
+}
+.flex-column { flex-direction: column; }
+.justify-between { justify-content: space-between; }
+.hidden { display: none !important; }
+
+/* タイポグラフィ・レイアウト */
+.text-center { text-align: center; }
+.py-4 { padding-top: 16px; padding-bottom: 16px; }
+.pt-4 { padding-top: 16px; }
+.pt-2 { padding-top: 8px; }
+.mb-2 { margin-bottom: 8px; }
+.mb-3 { margin-bottom: 12px; }
+.mb-4 { margin-bottom: 16px; }
+.mt-6 { margin-top: 24px; }
+.ml-3 { margin-left: 12px; }
+.pl-3 { padding-left: 12px; }
+.text-2xl { font-size: 24px; }
+.font-bold { font-weight: 700; }
+.font-black { font-weight: 900; }
+.font-mono { font-family: monospace; }
+.overflow-hidden { overflow: hidden; }
+.flex { display: flex; }
+.items-center { align-items: center; }
+.flex-1 { flex: 1; }
+.text-right { text-align: right; }
+
+.title {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+.subtitle {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-top: 4px;
+}
+
+/* 色表現 */
+.text-emerald { color: #34d399; }
+.text-amber { color: #fbbf24; }
+.text-rose { color: #f43f5e; }
+.text-sky { color: #38bdf8; }
+.text-teal { color: #2dd4bf; }
+
+/* カード・ボックス */
+.card {
+    background-color: #1e293b; /* 背景色を少し明るくして見やすく */
+    padding: 16px;
+    border-radius: 16px;
+    border: 1px solid #334155;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+}
+.card-sub {
+    background-color: rgba(30, 41, 59, 0.4);
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(51, 65, 85, 0.4);
+}
+.bg-dark-header { background-color: rgba(30, 41, 59, 0.8); }
+
+.scroll-box {
+    max-height: 50vh;
+    overflow-y: auto;
+}
+.space-y-3 > * + * { margin-top: 12px; }
+
+.input-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: #cbd5e1;
+    margin-bottom: 12px;
+    border-left: 4px solid #34d399;
+    padding-left: 8px;
+}
+
+/* 🚨 フォーム・入力欄（ここを大幅に強化しました） */
+.form-select {
+    width: 100%;
+    background-color: #0f172a;
+    border: 2px solid #475569;
+    border-radius: 12px;
+    padding: 12px 16px;
+    color: #f8fafc;
+    font-size: 16px !important;
+    font-weight: 700;
+    outline: none;
+}
+
+.input-row {
+    display: flex;
+    align-items: center;
+}
+.input-row > * + * { margin-left: 12px; }
+
+.no-badge {
+    width: 54px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #e2e8f0;
+    background-color: #0f172a;
+    padding: 10px 0;
+    border-radius: 8px;
+    border: 1px solid #475569;
+}
+
+/* メンバーの名前を入れるテキストボックス */
+.form-input {
+    flex: 1;
+    background-color: #0f172a; /* 入力欄の中身を暗く */
+    border: 2px solid #64748b; /* 枠線を太く、明るくして目立たせる */
+    border-radius: 12px;
+    padding: 12px 16px;
+    color: #ffffff; /* 入力した文字を真っ白に */
+    font-size: 16px !important;
+    font-weight: 700;
+    outline: none;
+    -webkit-user-select: text; /* スマホで文字入力を許可する必須設定 */
+    user-select: text;
+}
+.form-input:focus { 
+    border-color: #34d399; /* タップした時は緑色に光る */
+    background-color: #1e293b;
+}
+/* 入力前のヒント文字の色 */
+.form-input::placeholder {
+    color: #64748b;
+}
+
+/* ボタン設定 */
+.btn {
+    width: 100%;
+    font-weight: 700;
+    padding: 16px;
+    border-radius: 12px;
+    font-size: 18px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+.btn:active { transform: scale(0.98); }
+
+.btn-emerald { background-color: #10b981; color: #022c22; }
+.btn-amber { background-color: #f59e0b; color: #451a03; }
+.btn-rose { background-color: #f43f5e; color: #ffffff; padding: 14px; font-size: 16px; }
+.btn-sky { background-color: #0ea5e9; color: #0c4a6e; }
+.btn-dark { background-color: #1e293b; color: #cbd5e1; }
+.btn-dark-sub { background-color: #1e293b; color: #94a3b8; padding: 10px; font-size: 12px; }
+.btn-emerald-sub { background-color: #1e293b; color: #34d399; padding: 12px; font-size: 14px; }
+
+/* リスト・テーブル装飾 */
+.card-header {
+    background-color: rgba(51, 65, 85, 0.3);
+    padding: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: 0.1em;
+}
+.table-rows > * {
+    border-top: 1px solid rgba(51, 65, 85, 0.5);
+}
+.table-rows > *:first-child { border-top: none; }
+
+.table-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 14px;
+    font-size: 14px;
+}
+.table-row span { color: #94a3b8; }
+
+/* 対局中専用パーツ */
+.badge-honba {
+    background-color: #0f172a;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fbbf24;
+    margin-left: 12px;
+}
+.kyotaku-box {
+    background-color: #0f172a;
+    padding: 6px 12px;
+    border-radius: 12px;
+    border: 1px solid #334155;
+    text-align: right;
+}
+.kyotaku-label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 2px; }
+.kyotaku-value { font-size: 14px; font-weight: 700; color: #f59e0b; }
+
+.btn-dice {
+    background-color: #10b981;
+    color: #022c22;
+    font-weight: 700;
+    font-size: 12px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+}
+.dice-text { font-size: 12px; font-weight: 700; color: #cbd5e1; }
+.navi-text { font-size: 12px; color: #34d399; font-weight: 500; margin-top: 2px; }
+
+.match-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+}
+.wind-badge {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 900;
+    border-radius: 50%;
+    background-color: #1e293b;
+    border: 1px solid #475569;
+    color: #34d399;
+}
+.player-name-text { font-weight: 600; color: #e2e8f0; margin-left: 12px; }
+
+.input-score {
+    width: 112px;
+    background-color: #0f172a;
+    border: 2px solid #64748b;
+    text-align: right;
+    font-family: monospace;
+    font-weight: 700;
+    font-size: 18px;
+    color: #34d399;
+    border-radius: 12px;
+    padding: 6px 12px;
+    outline: none;
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+/* 結果・精算テーブル */
+.result-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+.result-table th {
+    background-color: rgba(51, 65, 85, 0.4);
+    font-size: 12px;
+    font-weight: 700;
+    color: #94a3b8;
+    padding: 12px;
+}
+.result-table td {
+    padding: 12px;
+    font-size: 14px;
+    border-top: 1px solid rgba(51, 65, 85, 0.5);
+}
+.pt-plus { color: #34d399; font-weight: 700; }
+.pt-minus { color: #f43f5e; font-weight: 700; }
+
+/* 全画面モーダル */
+.full-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #0f172a;
+    z-index: 50;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.border-bottom { border-bottom: 1px solid #1e293b; }
+
+/* (前半の共通スタイルはそのまま維持されます) */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; background-color: #0f172a; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; min-height: 100vh; padding: 16px; max-width: 440px; margin: 0 auto; }
+.screen { width: 100%; min-height: calc(100vh - 32px); display: flex; }
+.flex-column { flex-direction: column; }
+.justify-between { justify-content: space-between; }
+.hidden { display: none !important; }
+.text-center { text-align: center; }
+.py-4 { padding-top: 16px; padding-bottom: 16px; }
+.pt-4 { padding-top: 16px; }
+.pt-2 { padding-top: 8px; }
+.mb-2 { margin-bottom: 8px; }
+.mb-3 { margin-bottom: 12px; }
+.mb-4 { margin-bottom: 16px; }
+.mt-4 { margin-top: 16px; }
+.mt-6 { margin-top: 24px; }
+.ml-3 { margin-left: 12px; }
+.pl-3 { padding-left: 12px; }
+.text-2xl { font-size: 24px; }
+.font-bold { font-weight: 700; }
+.font-black { font-weight: 900; }
+.font-mono { font-family: monospace; }
+.overflow-hidden { overflow: hidden; }
+.flex { display: flex; }
+.items-center { align-items: center; }
+.flex-1 { flex: 1; }
+.text-right { text-align: right; }
+.title { font-size: 24px; font-weight: 700; letter-spacing: 0.05em; }
+.subtitle { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+.text-emerald { color: #34d399; }
+.text-amber { color: #fbbf24; }
+.text-rose { color: #f43f5e; }
+.text-sky { color: #38bdf8; }
+.text-teal { color: #2dd4bf; }
+.card { background-color: #1e293b; padding: 16px; border-radius: 16px; border: 1px solid #334155; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); }
+.card-sub { background-color: rgba(30, 41, 59, 0.4); padding: 12px; border-radius: 12px; border: 1px solid rgba(51, 65, 85, 0.4); }
+.bg-dark-header { background-color: rgba(30, 41, 59, 0.8); }
+.scroll-box { max-height: 50vh; overflow-y: auto; }
+.scroll-box-rules { max-height: 75vh; overflow-y: auto; padding-right: 2px; }
+.space-y-3 > * + * { margin-top: 12px; }
+.input-label { display: block; font-size: 13px; font-weight: 700; color: #cbd5e1; margin-bottom: 12px; border-left: 4px solid #34d399; padding-left: 8px; }
+.form-select { width: 100%; background-color: #0f172a; border: 2px solid #475569; border-radius: 12px; padding: 12px 16px; color: #f8fafc; font-size: 16px !important; font-weight: 700; outline: none; }
+.input-row { display: flex; align-items: center; }
+.input-row > * + * { margin-left: 12px; }
+.no-badge { width: 54px; text-align: center; font-size: 12px; font-weight: 700; color: #e2e8f0; background-color: #0f172a; padding: 10px 0; border-radius: 8px; border: 1px solid #475569; }
+.form-input { flex: 1; background-color: #0f172a; border: 2px solid #64748b; border-radius: 12px; padding: 12px 16px; color: #ffffff; font-size: 16px !important; font-weight: 700; outline: none; -webkit-user-select: text; user-select: text; }
+.form-input:focus { border-color: #34d399; background-color: #1e293b; }
+.form-input::placeholder { color: #64748b; }
+.btn { width: 100%; font-weight: 700; padding: 16px; border-radius: 12px; font-size: 18px; border: none; cursor: pointer; transition: background-color 0.15s; }
+.btn:active { transform: scale(0.98); }
+.btn-emerald { background-color: #10b981; color: #022c22; }
+.btn-amber { background-color: #f59e0b; color: #451a03; }
+.btn-rose { background-color: #f43f5e; color: #ffffff; padding: 14px; font-size: 16px; }
+.btn-sky { background-color: #0ea5e9; color: #0c4a6e; }
+.btn-dark { background-color: #1e293b; color: #cbd5e1; }
+.btn-dark-sub { background-color: #1e293b; color: #94a3b8; padding: 10px; font-size: 12px; }
+.btn-emerald-sub { background-color: #1e293b; color: #34d399; padding: 12px; font-size: 14px; }
+.card-header { background-color: rgba(51, 65, 85, 0.3); padding: 8px; font-size: 12px; font-weight: 700; color: #94a3b8; letter-spacing: 0.1em; }
+.table-rows > * { border-top: 1px solid rgba(51, 65, 85, 0.5); }
+.table-rows > *:first-child { border-top: none; }
+.table-row { display: flex; justify-content: space-between; padding: 14px; font-size: 14px; }
+.table-row span { color: #94a3b8; }
+.badge-honba { background-color: #0f172a; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; color: #fbbf24; margin-left: 12px; }
+.kyotaku-box { background-color: #0f172a; padding: 6px 12px; border-radius: 12px; border: 1px solid #334155; text-align: right; }
+.kyotaku-label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 2px; }
+.kyotaku-value { font-size: 14px; font-weight: 700; color: #f59e0b; }
+.btn-dice { background-color: #10b981; color: #022c22; font-weight: 700; font-size: 12px; padding: 8px 12px; border-radius: 8px; border: none; cursor: pointer; }
+.dice-text { font-size: 12px; font-weight: 700; color: #cbd5e1; }
+.navi-text { font-size: 12px; color: #34d399; font-weight: 500; margin-top: 2px; }
+.match-row { display: flex; align-items: center; justify-content: space-between; padding: 16px; }
+.wind-badge { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; border-radius: 50%; background-color: #1e293b; border: 1px solid #475569; color: #34d399; }
+.player-name-text { font-weight: 600; color: #e2e8f0; margin-left: 12px; }
+.input-score { width: 112px; background-color: #0f172a; border: 2px solid #64748b; text-align: right; font-family: monospace; font-weight: 700; font-size: 18px; color: #34d399; border-radius: 12px; padding: 6px 12px; outline: none; -webkit-user-select: text; user-select: text; }
+.result-table { width: 100%; border-collapse: collapse; text-align: left; }
+.result-table th { background-color: rgba(51, 65, 85, 0.4); font-size: 12px; font-weight: 700; color: #94a3b8; padding: 12px; }
+.result-table td { padding: 12px; font-size: 14px; border-top: 1px solid rgba(51, 65, 85, 0.5); }
+.pt-plus { color: #34d399; font-weight: 700; }
+.pt-minus { color: #f43f5e; font-weight: 700; }
+.full-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: #0f172a; z-index: 50; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; }
+.border-bottom { border-bottom: 1px solid #1e293b; }
+
+/* 🌟 追加した項目設定行のレイアウト */
+.table-row-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    font-size: 14px;
+}
+.table-row-flex span { color: #94a3b8; font-weight: 500; }
+.inline-select {
+    background-color: #0f172a;
+    border: 1px solid #475569;
+    color: #f8fafc;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    outline: none;
+}
+
+/* 🌟 ドラッグ＆ドロップ用 UI スタイル */
+.drag-instruction {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-bottom: 6px;
+    font-weight: bold;
+}
+.chip-pool {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 44px;
+    padding: 8px;
+    background-color: #0f172a;
+    border-radius: 12px;
+    border: 1px dashed #475569;
+}
+.player-chip {
+    background-color: #334155;
+    color: #ffffff;
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: grab;
+    user-select: none;
+    touch-action: none; /* スマホ画面の勝手なスクロールをブロック */
+    border: 1px solid #475569;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.player-chip:active { cursor: grabbing; background-color: #475569; }
+
+.seats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 8px;
+}
+.seat-box {
+    background-color: #0f172a;
+    border: 2px dashed #475569;
+    border-radius: 12px;
+    padding: 12px;
+    min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    transition: all 0.2s;
+}
+.seat-box.drag-over {
+    border-color: #fbbf24;
+    background-color: rgba(251, 191, 36, 0.05);
+}
+.seat-label {
+    font-size: 12px;
+    font-weight: 900;
+    color: #94a3b8;
+    margin-bottom: 6px;
+    background-color: #1e293b;
+    padding: 2px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+.seat-label.active-wind { color: #fbbf24; }
+
+/* 🌟 アコーディオン用のスタイル */
+.accordion-header {
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    padding: 12px !important;
+    background-color: rgba(71, 85, 105, 0.4) !important;
+    transition: background-color 0.2s;
+}
+.accordion-header:active {
+    background-color: rgba(71, 85, 105, 0.6) !important;
+}
+.accordion-icon {
+    position: absolute;
+    right: 16px;
+    font-size: 10px;
+    transition: transform 0.2s;
+    color: #94a3b8;
+}
+.accordion-icon.open {
+    transform: rotate(180deg); /* 開いたときに矢印を上に向ける */
+}
+.hidden-accordion {
+    display: none;
+}
+
+/* 🌟 対局中・直感精算パネル用スタイル */
+.scroll-box-match { max-height: 80vh; overflow-y: auto; padding-right: 2px; }
+.bg-panel { background-color: rgba(15, 23, 42, 0.6); border-color: rgba(52, 211, 153, 0.3); }
+.input-label-sm { font-size: 11px; color: #94a3b8; font-weight: bold; display: block; margin-bottom: 4px; }
+
+.role-box {
+    flex: 1;
+    background-color: #0f172a;
+    border: 2px dashed #475569;
+    border-radius: 12px;
+    padding: 8px;
+    text-align: center;
+    min-height: 70px;
+}
+.winner-target.drag-over { border-color: #34d399; background-color: rgba(52, 211, 153, 0.05); }
+.loser-target.drag-over { border-color: #f43f5e; background-color: rgba(244, 63, 94, 0.05); }
+
+.role-label { font-size: 11px; font-weight: bold; color: #94a3b8; display: block; margin-bottom: 4px; }
+.role-slot { font-size: 12px; color: #475569; font-weight: 500; padding: 6px; }
+
+.gap-2 { gap: 8px; }
+.btn-type {
+    flex: 1; background-color: #1e293b; border: 1px solid #475569; color: #cbd5e1;
+    padding: 8px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer;
+}
+.btn-type.active { background-color: #0ea5e9; border-color: #38bdf8; color: #ffffff; }
+.btn-clear { background-color: #334155; color: #cbd5e1; border: none; padding: 8px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; }
+
+.flex-wrap-gap { display: flex; flex-wrap: wrap; gap: 6px; }
+.btn-scale {
+    background-color: #1e293b; border: 1px solid #334155; color: #e2e8f0;
+    padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer;
+}
+.btn-scale:active, .btn-scale.active { background-color: #f59e0b; color: #000; border-color: #fbbf24; }
+
+.inline-select-sm {
+    background-color: #0f172a; border: 1px solid #475569; color: #f8fafc;
+    padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; outline: none;
+}
+.btn-execute {
+    width: 100%; background-color: #34d399; color: #022c22; font-weight: 900;
+    padding: 12px; border-radius: 12px; font-size: 15px; border: none; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(52, 211, 153, 0.2);
+}
+.btn-execute:active { transform: scale(0.98); }
+
+/* 対局中画面のドラッグ用タグスタイル */
+.match-player-chip {
+    background-color: #1e293b; color: #ffffff; padding: 4px 10px;
+    border-radius: 12px; font-size: 13px; font-weight: bold; border: 1px solid #475569;
+    cursor: grab; display: inline-block; user-select: none; touch-action: none;
+}
+
+/* 🌟 聴牌ボタンアクティブ用の専用カラー */
+.btn-type.active-tenpai {
+    background-color: #d97706; /* 濃いアンバー */
+    border-color: #f59e0b;
+    color: #ffffff;
+}
+.text-amber-btn {
+    color: #fdba74;
+}

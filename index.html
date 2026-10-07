@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>麻雀スコアPWA</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- 画面1：参加人数・メンバー登録画面（変更なし） -->
+    <div id="screen-register" class="screen flex-column justify-between">
+      <div>
+        <header class="text-center py-4 mb-4">
+          <h1 class="title text-emerald">麻雀マネージャー</h1>
+          <p class="subtitle">参加メンバー登録</p>
+        </header>
+        <div class="card mb-4">
+          <label class="input-label">本日の参加人数</label>
+          <select
+            id="member-count-select"
+            class="form-select"
+            onchange="updatePlayerInputs()"
+          >
+            <option value="3">3人</option>
+            <option value="4" selected>4人</option>
+            <option value="5">5人</option>
+            <option value="6">6人</option>
+            <option value="7">7人</option>
+            <option value="8">8人</option>
+            <option value="9">9人</option>
+            <option value="10">10人</option>
+          </select>
+        </div>
+        <div class="card scroll-box">
+          <label class="input-label">プレイヤー名一覧</label>
+          <div id="player-inputs-container" class="space-y-3">
+            <div class="input-row">
+              <span class="no-badge">No. 1</span
+              ><input
+                type="text"
+                id="p-input-0"
+                placeholder="プレイヤー名"
+                value="プレイヤー1"
+                class="form-input"
+              />
+            </div>
+            <div class="input-row">
+              <span class="no-badge">No. 2</span
+              ><input
+                type="text"
+                id="p-input-1"
+                placeholder="プレイヤー名"
+                value="プレイヤー2"
+                class="form-input"
+              />
+            </div>
+            <div class="input-row">
+              <span class="no-badge">No. 3</span
+              ><input
+                type="text"
+                id="p-input-2"
+                placeholder="プレイヤー名"
+                value="プレイヤー3"
+                class="form-input"
+              />
+            </div>
+            <div class="input-row">
+              <span class="no-badge">No. 4</span
+              ><input
+                type="text"
+                id="p-input-3"
+                placeholder="プレイヤー名"
+                value="プレイヤー4"
+                class="form-input"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="pt-4 mb-2">
+        <button onclick="submitRegistration()" class="btn btn-emerald">
+          メンバーを確定してルール設定へ
+        </button>
+      </div>
+    </div>
+
+    <!-- 画面2：ルール設定・確認画面（★ルール変更＆ドラッグ席決めを搭載） -->
+    <div id="screen-rules" class="screen flex-column justify-between hidden">
+      <div class="scroll-box-rules">
+        <header class="text-center py-4 mb-2">
+          <h1 class="title text-amber">ルール・卓設定</h1>
+          <p class="subtitle">ルール調整とメンバーの席決め</p>
+        </header>
+
+        <!-- 麻雀モード選択 -->
+        <div class="card mb-4">
+          <label class="input-label">麻雀種目（卓の人数）</label>
+          <select
+            id="game-mode-select"
+            class="form-select"
+            onchange="onGameModeChange()"
+          >
+            <option value="4" selected>4人麻雀 (4人打ち)</option>
+            <option value="3">3人麻雀 (3人打ち)</option>
+          </select>
+        </div>
+
+        <!-- ★編集可能なルール設定項目 -->
+        <!-- 画面2：ルール設定・確認画面（該当のカード部分のみ抜粋、カードごと差し替えてください） -->
+        <div class="card p-0 mb-4 overflow-hidden">
+          <!-- タップして開閉するヘッダー -->
+          <div
+            class="card-header text-center accordion-header"
+            onclick="toggleAccordion()"
+          >
+            カスタムルール設定
+            <span id="accordion-icon" class="accordion-icon">▼</span>
+          </div>
+          <!-- 初期状態では非表示（hidden-accordion）にする枠 -->
+          <div id="accordion-content" class="table-rows hidden-accordion">
+            <div class="table-row-flex">
+              <span>ゲームの長さ</span>
+              <select id="rule-length" class="inline-select">
+                <option value="tonan" selected>東南戦</option>
+                <option value="ton">東風戦</option>
+              </select>
+            </div>
+            <div class="table-row-flex">
+              <span>持ち点 / 返し点</span>
+              <select id="rule-points" class="inline-select">
+                <option value="25-30" selected>25000 / 30000</option>
+                <option value="30-30">30000 / 30000</option>
+              </select>
+            </div>
+            <div class="table-row-flex">
+              <span>順位ウマ</span>
+              <select id="rule-uma" class="inline-select">
+                <option value="10-30" selected>10 - 30</option>
+                <option value="10-20">10 - 20</option>
+                <option value="none">ウマなし</option>
+              </select>
+            </div>
+            <div class="table-row-flex">
+              <span>連荘条件</span>
+              <select id="rule-renchan" class="inline-select">
+                <option value="tenpai" selected>聴牌連荘</option>
+                <option value="agari">和了連荘</option>
+              </select>
+            </div>
+            <div class="table-row-flex">
+              <span>喰いタン/後付け</span>
+              <select id="rule-kuitan" class="inline-select">
+                <option value="ariari" selected>ありあり</option>
+                <option value="arinashi">食いあり後なし</option>
+                <option value="nasinasi">なしなし</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- ★ドラッグ＆ドロップ座順決定セクション -->
+        <div class="card mb-4">
+          <label class="input-label"
+            >席決め（名前をタッチして下の風へ引く）</label
+          >
+
+          <!-- 待機プレイヤー枠（ここからドラッグ） -->
+          <div class="drag-instruction">参加メンバー（タグ）:</div>
+          <div id="pool-container" class="chip-pool">
+            <!-- JSでプレイヤーのドラッグ可能タグを生成 -->
+          </div>
+
+          <!-- ターゲット座席枠（ここにドロップ） -->
+          <div class="drag-instruction mt-4">対局席配置:</div>
+          <div id="seats-container" class="seats-grid">
+            <!-- JSで東・南・西・北のドロップエリアを生成 -->
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-3 pt-4 mb-2">
+        <button onclick="startMatch()" class="btn btn-amber">
+          🀄 この配置で対局開始
+        </button>
+        <button onclick="backToScreen('screen-rules')" class="btn btn-dark-sub">
+          メンバー登録に戻る
+        </button>
+      </div>
+    </div>
+
+    <!-- 画面3：対局中メイン画面（変更なし） -->
+    <!-- 画面3：対局中メイン画面（画面3全体をこちらに差し替えてください） -->
+    <div id="screen-match" class="screen flex-column justify-between hidden">
+      <div class="scroll-box-match">
+        <!-- 上部局情報 -->
+        <div class="card flex justify-between items-center mb-2 bg-dark-header">
+          <div>
+            <!-- 東・南、局数、本場にそれぞれ個別のidを付与 -->
+            <span
+              id="current-wind-label"
+              class="text-2xl font-black text-emerald"
+              >東</span
+            >
+            <span
+              id="current-kyoku-num"
+              class="text-2xl font-black text-emerald"
+              >1</span
+            >
+            <span class="text-2xl font-black text-emerald">局</span>
+            <span id="current-honba" class="badge-honba">0 本場</span>
+          </div>
+          <div class="kyotaku-box">
+            <span class="kyotaku-label">供託</span
+            ><span id="current-kyotaku" class="kyotaku-value">0 本</span>
+          </div>
+        </div>
+
+        <!-- サイコロ & 配牌ナビ -->
+        <div class="card-sub flex items-center justify-between mb-2">
+          <button onclick="rollDice()" class="btn-dice">🎲 サイコロ</button>
+          <div class="text-right flex-1 pl-3">
+            <p id="dice-result" class="dice-text">出目: --</p>
+            <p id="haipai-navi" class="navi-text">山取り位置ナビ</p>
+          </div>
+        </div>
+
+        <!-- プレイヤー情報（ここにアガリ対象者をドラッグドロップできるようにします） -->
+        <div class="card p-0 mb-2 overflow-hidden">
+          <div class="card-header text-center">
+            現在の持ち点（和了・放銃のドロップ先）
+          </div>
+          <div id="match-players-list" class="table-rows">
+            <!-- JSで東・南・西・北の点数ボックスとドロップエリアが生成されます -->
+          </div>
+        </div>
+
+        <!-- ★新設：直感型アガリ計算・点数授受パネル -->
+<!-- ★新設：直感型アガリ計算・点数授受パネル（ご指定の並び順版） -->
+<div class="card mb-2 bg-panel">
+    <div class="drag-instruction text-emerald">✨ 直感精算パネル:</div>
+    
+    <!-- 1. 役割枠（ Winner / Loser ドロップエリア） -->
+    <div class="flex justify-between gap-2 mb-2">
+        <div id="role-winner-box" class="role-box winner-target">
+            <span id="role-winner-label" class="role-label">🏆 和了者 (アガリ)</span>
+            <div class="role-slot" id="slot-winner">ここにプレイヤーをドロップ</div>
+        </div>
+        <div id="role-loser-box" class="role-box loser-target">
+            <span id="role-loser-label" class="role-label">🎯 放銃者 (ロンの場合)</span>
+            <div class="role-slot" id="slot-loser">ここにプレイヤーをドロップ</div>
+        </div>
+    </div>
+
+    <!-- 2. アクション選択（ロン・ツモ・聴牌・クリアを横一列に集約） -->
+    <div class="flex gap-2 mb-2">
+        <button id="btn-agari-ron" onclick="setAgariType('ron')" class="btn-type active">ロン</button>
+        <button id="btn-agari-tsumo" onclick="setAgariType('tsumo')" class="btn-type">ツモ</button>
+        <button id="btn-agari-tenpai" onclick="setAgariType('tenpai')" class="btn-type text-amber-btn">聴牌</button>
+        <button onclick="clearRoleSlots()" class="btn-clear">クリア</button>
+    </div>
+
+    <!-- 3. 点数詳細選択（アクションで選んだあとに細かく決めるエリア） -->
+    <div id="panel-scale-box" class="calc-selector-box mb-2">
+        <label class="input-label-sm">【満貫クラス】</label>
+        <div class="flex-wrap-gap">
+            <button onclick="selectManganScale('mangan')" class="btn-scale">満貫</button>
+            <button onclick="selectManganScale('hanman')" class="btn-scale">跳満</button>
+            <button onclick="selectManganScale('baiman')" class="btn-scale">倍満</button>
+            <button onclick="selectManganScale('sanbaiman')" class="btn-scale">3倍満</button>
+            <button onclick="selectManganScale('yakuman')" class="btn-scale">役満</button>
+        </div>
+    </div>
+
+    <div id="panel-detail-box" class="calc-selector-box">
+        <label class="input-label-sm">【翻・符で指定】</label>
+        <div class="flex items-center gap-2 mb-1">
+            <select id="select-han" class="inline-select-sm">
+                <option value="1">1翻</option><option value="2">2翻</option><option value="3">3翻</option><option value="4">4翻</option>
+            </select>
+            <select id="select-fu" class="inline-select-sm">
+                <option value="20">20符</option><option value="25">25符</option><option value="30" selected>30符</option><option value="40">40符</option><option value="50">50符</option><option value="60">60符</option>
+            </select>
+        </div>
+    </div>
+    
+    <!-- 4. 実行決済ボタン -->
+    <button onclick="executePointTransfer()" class="btn-execute mt-2">⚡ 計算して点数を移動する</button>
+</div>
+
+      <div class="pt-2 mb-2">
+        <button onclick="endMatch()" class="btn btn-rose">
+          半荘終了（総合スコア計算へ）
+        </button>
+      </div>
+    </div>
+
+    <!-- 画面4：着順とポイント画面（変更なし） -->
+    <div id="screen-result" class="screen flex-column justify-between hidden">
+      <div>
+        <header class="text-center py-4 mb-2">
+          <h1 class="title text-sky">対局結果 (精算)</h1>
+          <p class="subtitle">ウマオカ自動計算</p>
+        </header>
+        <div class="card p-0 mb-4 overflow-hidden">
+          <table class="result-table">
+            <thead>
+              <tr>
+                <th>着順</th>
+                <th>名前</th>
+                <th class="text-right">素点</th>
+                <th class="text-right">ポイント</th>
+              </tr>
+            </thead>
+            <tbody id="result-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="space-y-3 pt-4 mb-2">
+        <button onclick="openStats()" class="btn btn-sky">
+          📊 総合成績表を見る
+        </button>
+        <button onclick="nextGame()" class="btn btn-emerald-sub">
+          次の半荘を開始
+        </button>
+      </div>
+    </div>
+
+    <!-- 画面5：総合成績表（変更なし） -->
+    <div id="screen-stats" class="full-modal hidden">
+      <div class="modal-content">
+        <header class="text-center py-4 border-bottom">
+          <h1 class="title text-teal">総合成績表</h1>
+          <p class="subtitle">トータル累積スコア</p>
+        </header>
+        <div class="card p-0 mt-6 overflow-hidden">
+          <table class="result-table">
+            <thead>
+              <tr>
+                <th>プレイヤー</th>
+                <th class="text-center">対局数</th>
+                <th class="text-right">トータルポイント</th>
+              </tr>
+            </thead>
+            <tbody id="stats-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="pt-4 mb-2">
+        <button onclick="closeStats()" class="btn btn-dark">
+          成績表を閉じる
+        </button>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

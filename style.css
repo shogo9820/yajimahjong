@@ -1,10 +1,4 @@
 /* 基本設定 */
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
-
 /* 基本設定 */
 * {
     box-sizing: border-box;
@@ -19,31 +13,26 @@ body {
     background-color: #0f172a; /* 深みのあるダークブルー */
     color: #e2e8f0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    min-height: 100vh;
+    height: 100vh; /* 🚨画面サイズに完全に固定 */
+    max-height: 100vh;
     padding: 12px;
     max-width: 440px;
     margin: 0 auto;
-    overflow-x: hidden; /* 横揺れ防止 */
+    overflow: hidden; /* 🚨画面全体の無駄なスクロールを強制カット */
 }
 
-/* 🚨 画面と遷移制御（ここを強力に修正しました） */
+/* 画面と遷移制御 */
 .screen {
     width: 100%;
-    /* 使用していない画面が裏で高さを確保しないよう、縦並びの制御を厳格化 */
+    height: 100%; /* 親のbodyいっぱいに広げる */
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
 }
+.hidden { display: none !important; }
 
-/* 非表示にするときは、スペース（高さ・幅）も完全にゼロにして存在を消す */
-.hidden { 
-    display: none !important; 
-    height: 0 !important;
-    max-height: 0 !important;
-    overflow: hidden !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    border: none !important;
+/* 終了ボタンを一番下にピタッと固定するための設定 */
+.mt-auto {
+    margin-top: auto;
 }
 
 .flex-column { flex-direction: column; }

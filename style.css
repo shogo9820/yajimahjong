@@ -571,3 +571,37 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
 .text-amber-btn {
     color: #fdba74;
 }
+
+/* 🌟 ヘッダー引っ越し版「終局」ボタンのスタイル */
+.btn-end-header {
+    background-color: #f43f5e; /* 鮮やかな赤色 */
+    color: #ffffff;
+    font-weight: 900;
+    font-size: 14px;
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(244, 63, 94, 0.3);
+    transition: background-color 0.1s;
+}
+.btn-end-header:active {
+    background-color: #e11d48;
+    transform: scale(0.95);
+}
+
+/* ヘッダー内すっきり配置用の供託表示スタイル */
+.badge-kyotaku {
+    font-size: 11px;
+    font-weight: 700;
+    color: #f59e0b;
+    background-color: #0f172a;
+    padding: 4px 8px;
+    border-radius: 6px;
+    margin-left: 8px;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+/* 精算パネルを縦に大きく広げるための追加設定 */
+.flex-col { flex-direction: column; }
+.flex-1 { flex: 1; }

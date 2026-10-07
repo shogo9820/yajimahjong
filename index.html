@@ -193,86 +193,144 @@
     </div>
 
     <!-- 画面3：対局中メイン画面（変更なし） -->
-<div id="screen-match" class="screen flex-column hidden">
-    <!-- 1. 上部局情報 -->
-    <div class="card flex justify-between items-center mb-2 bg-dark-header">
-        <div>
-            <span id="current-wind-label" class="text-2xl font-black text-emerald">東</span>
-            <span id="current-kyoku-num" class="text-2xl font-black text-emerald">1</span>
-            <span class="text-2xl font-black text-emerald">局</span>
-            <span id="current-honba" class="badge-honba">0 本場</span>
+    <!-- 画面3：対局中メイン画面（ヘッダー右に終局ボタン、下部の余白を精算パネルへ開放） -->
+    <div id="screen-match" class="screen flex-column hidden">
+      <!-- 1. 上部局情報 ＋ 終局ボタンを横並びに配置 -->
+      <div
+        class="card flex justify-between items-center mb-2 bg-dark-header py-2"
+      >
+        <div class="flex items-center">
+          <span id="current-wind-label" class="text-2xl font-black text-emerald"
+            >東</span
+          >
+          <span id="current-kyoku-num" class="text-2xl font-black text-emerald"
+            >1</span
+          >
+          <span class="text-2xl font-black text-emerald">局</span>
+          <span id="current-honba" class="badge-honba">0 本場</span>
+          <span id="current-kyotaku" class="badge-kyotaku">供託 0本</span>
         </div>
-        <div class="kyotaku-box"><span class="kyotaku-label">供託</span><span id="current-kyotaku" class="kyotaku-value">0 本</span></div>
-    </div>
+        <!-- 🚨 一番下からここに引っ越してきた「終局」ボタン -->
+        <button onclick="endMatch()" class="btn-end-header">終局</button>
+      </div>
 
-    <!-- 2. サイコロ & 配牌ナビ -->
-    <div class="card-sub flex items-center justify-between mb-2">
+      <!-- 2. サイコロ & 配牌ナビ -->
+      <div class="card-sub flex items-center justify-between mb-2">
         <button onclick="rollDice()" class="btn-dice">🎲 サイコロ</button>
         <div class="text-right flex-1 pl-3">
-            <p id="dice-result" class="dice-text">出目: --</p>
-            <p id="haipai-navi" class="navi-text">山取り位置ナビ</p>
+          <p id="dice-result" class="dice-text">出目: --</p>
+          <p id="haipai-navi" class="navi-text">山取り位置ナビ</p>
         </div>
-    </div>
+      </div>
 
-    <!-- 3. プレイヤー情報 -->
-    <div class="card p-0 mb-2 overflow-hidden">
-        <div class="card-header text-center">現在の持ち点（精算時のドロップ先）</div>
+      <!-- 3. プレイヤー情報 -->
+      <div class="card p-0 mb-2 overflow-hidden">
+        <div class="card-header text-center">
+          現在の持ち点（精算時のドロップ先）
+        </div>
         <div id="match-players-list" class="table-rows"></div>
-    </div>
+      </div>
 
-    <!-- 4. 精算・計算入力パネル -->
-    <div class="card mb-2 bg-panel">
+      <!-- 4. 精算・計算入力パネル（★一番下のボタンが消えたので、高さを広げて配置） -->
+      <div class="card mb-1 bg-panel flex-1 flex flex-col justify-between">
         <div class="drag-instruction text-emerald">✨ 直感精算パネル:</div>
-        
+
+        <!-- 役割枠 -->
         <div class="flex justify-between gap-2 mb-2">
-            <div id="role-winner-box" class="role-box winner-target">
-                <span id="role-winner-label" class="role-label">🏆 和了者 (アガリ)</span>
-                <div class="role-slot" id="slot-winner">ここにプレイヤーをドロップ</div>
+          <div id="role-winner-box" class="role-box winner-target">
+            <span id="role-winner-label" class="role-label"
+              >🏆 和了者 (アガリ)</span
+            >
+            <div class="role-slot" id="slot-winner">
+              ここにプレイヤーをドロップ
             </div>
-            <div id="role-loser-box" class="role-box loser-target">
-                <span id="role-loser-label" class="role-label">🎯 放銃者 (ロンの場合)</span>
-                <div class="role-slot" id="slot-loser">ここにプレイヤーをドロップ</div>
+          </div>
+          <div id="role-loser-box" class="role-box loser-target">
+            <span id="role-loser-label" class="role-label"
+              >🎯 放銃者 (ロンの場合)</span
+            >
+            <div class="role-slot" id="slot-loser">
+              ここにプレイヤーをドロップ
             </div>
+          </div>
         </div>
 
+        <!-- ロン・ツモ・聴牌・クリア -->
         <div class="flex gap-2 mb-2">
-            <button id="btn-agari-ron" onclick="setAgariType('ron')" class="btn-type active">ロン</button>
-            <button id="btn-agari-tsumo" onclick="setAgariType('tsumo')" class="btn-type">ツモ</button>
-            <button id="btn-agari-tenpai" onclick="setAgariType('tenpai')" class="btn-type text-amber-btn">聴牌</button>
-            <button onclick="clearRoleSlots()" class="btn-clear">クリア</button>
+          <button
+            id="btn-agari-ron"
+            onclick="setAgariType('ron')"
+            class="btn-type active"
+          >
+            ロン
+          </button>
+          <button
+            id="btn-agari-tsumo"
+            onclick="setAgariType('tsumo')"
+            class="btn-type"
+          >
+            ツモ
+          </button>
+          <button
+            id="btn-agari-tenpai"
+            onclick="setAgariType('tenpai')"
+            class="btn-type text-amber-btn"
+          >
+            聴牌
+          </button>
+          <button onclick="clearRoleSlots()" class="btn-clear">クリア</button>
         </div>
 
+        <!-- 満貫クラス -->
         <div id="panel-scale-box" class="calc-selector-box mb-2">
-            <label class="input-label-sm">【満貫クラス】</label>
-            <div class="flex-wrap-gap">
-                <button onclick="selectManganScale('mangan')" class="btn-scale">満貫</button>
-                <button onclick="selectManganScale('hanman')" class="btn-scale">跳満</button>
-                <button onclick="selectManganScale('baiman')" class="btn-scale">倍満</button>
-                <button onclick="selectManganScale('sanbaiman')" class="btn-scale">3倍満</button>
-                <button onclick="selectManganScale('yakuman')" class="btn-scale">役満</button>
-            </div>
+          <label class="input-label-sm">【満貫クラス】</label>
+          <div class="flex-wrap-gap">
+            <button onclick="selectManganScale('mangan')" class="btn-scale">
+              満貫
+            </button>
+            <button onclick="selectManganScale('hanman')" class="btn-scale">
+              跳満
+            </button>
+            <button onclick="selectManganScale('baiman')" class="btn-scale">
+              倍満
+            </button>
+            <button onclick="selectManganScale('sanbaiman')" class="btn-scale">
+              3倍満
+            </button>
+            <button onclick="selectManganScale('yakuman')" class="btn-scale">
+              役満
+            </button>
+          </div>
         </div>
 
-        <div id="panel-detail-box" class="calc-selector-box">
-            <label class="input-label-sm">【翻・符で指定】</label>
-            <div class="flex items-center gap-2 mb-1">
-                <select id="select-han" class="inline-select-sm">
-                    <option value="1">1翻</option><option value="2">2翻</option><option value="3">3翻</option><option value="4">4翻</option>
-                </select>
-                <select id="select-fu" class="inline-select-sm">
-                    <option value="20">20符</option><option value="25">25符</option><option value="30" selected>30符</option><option value="40">40符</option><option value="50">50符</option><option value="60">60符</option>
-                </select>
-            </div>
+        <!-- 翻符指定 -->
+        <div id="panel-detail-box" class="calc-selector-box mb-2">
+          <label class="input-label-sm">【翻・符で指定】</label>
+          <div class="flex items-center gap-2">
+            <select id="select-han" class="inline-select-sm">
+              <option value="1">1翻</option>
+              <option value="2">2翻</option>
+              <option value="3">3翻</option>
+              <option value="4">4翻</option>
+            </select>
+            <select id="select-fu" class="inline-select-sm">
+              <option value="20">20符</option>
+              <option value="25">25符</option>
+              <option value="30" selected>30符</option>
+              <option value="40">40符</option>
+              <option value="50">50符</option>
+              <option value="60">60符</option>
+            </select>
+          </div>
         </div>
-        
-        <button onclick="executePointTransfer()" class="btn-execute mt-2">⚡ 計算して点数を移動する</button>
+
+        <!-- 精算実行ボタン -->
+        <button onclick="executePointTransfer()" class="btn-execute mt-auto">
+          ⚡ 計算して点数を移動する
+        </button>
+      </div>
     </div>
-    
-    <!-- 5. 終了ボタン（最下部にピッタリとくっつけます） -->
-    <div class="mt-auto pt-2 mb-2">
-        <button onclick="endMatch()" class="btn btn-rose">半荘終了（総合スコア計算へ）</button>
-    </div>
-</div>
+
     <!-- 画面4：着順とポイント画面（変更なし） -->
     <div id="screen-result" class="screen flex-column justify-between hidden">
       <div>

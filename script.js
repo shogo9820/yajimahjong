@@ -370,12 +370,12 @@ appState.honbaCount = 0;
 appState.kyotakuCount = 0;
 updateUIKyokuDisplay();
 
-// 局・本場の画面表示を同期する関数を新設
+// 局・本場・供託の画面上部表示を同期する関数（修正版）
 function updateUIKyokuDisplay() {
     document.getElementById('current-wind-label').innerText = appState.currentWind === 0 ? '東' : '南';
     document.getElementById('current-kyoku-num').innerText = appState.currentKyoku;
     document.getElementById('current-honba').innerText = `${appState.honbaCount} 本場`;
-    document.getElementById('current-kyotaku').innerText = `${appState.kyotakuCount} 本`;
+    document.getElementById('current-kyotaku').innerText = `供託 ${appState.kyotakuCount}本`; // 🚨ここを書き換え
 }
 
 // 既存の setAgariType 関数を以下に丸ごと差し替え

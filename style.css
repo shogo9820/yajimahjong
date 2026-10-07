@@ -5,6 +5,13 @@
     padding: 0;
 }
 
+/* 基本設定 */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
 body {
     -webkit-touch-callout: none;
     -webkit-user-select: none;
@@ -13,17 +20,32 @@ body {
     color: #e2e8f0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     min-height: 100vh;
-    padding: 16px;
+    padding: 12px;
     max-width: 440px;
     margin: 0 auto;
+    overflow-x: hidden; /* 横揺れ防止 */
 }
 
-/* 画面と遷移制御 */
+/* 🚨 画面と遷移制御（ここを強力に修正しました） */
 .screen {
     width: 100%;
-    min-height: calc(100vh - 32px);
+    /* 使用していない画面が裏で高さを確保しないよう、縦並びの制御を厳格化 */
     display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
+
+/* 非表示にするときは、スペース（高さ・幅）も完全にゼロにして存在を消す */
+.hidden { 
+    display: none !important; 
+    height: 0 !important;
+    max-height: 0 !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+}
+
 .flex-column { flex-direction: column; }
 .justify-between { justify-content: space-between; }
 .hidden { display: none !important; }

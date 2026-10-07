@@ -1,3 +1,12 @@
+// PWA用のService Workerをブラウザに登録する処理
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+            .then(reg => console.log('PWA Service Worker 登録成功!', reg))
+            .catch(err => console.log('PWA Service Worker 登録失敗...', err));
+    });
+}
+
 const windLabels = ['東', '南', '西', '北'];
 
 // アプリ内部のすべての状態データを一元管理

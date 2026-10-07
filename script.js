@@ -11,25 +11,26 @@ const windLabels = ['東', '南', '西', '北'];
 
 // アプリ内部のすべての状態データを一元管理
 let appState = {
-    allPlayers: [],    
-    activePlayers: [], 
-    currentPoints: {}, 
-    stats: {},         
-    gameCount: 0,      
-    tableSize: 4,
+    allPlayers: [],    // その日に参加する全員の名前リスト（6人、10人など対応）
+    activePlayers: [], // 今回の半荘で実際に卓についているメンバー（東南西北の順：0番目が常に親）
+    currentPoints: {}, // 今回の半荘の現在の持ち点
+    stats: {},         // 参加者全員の通算累積成績
+    gameCount: 0,      // 総半荘数
+    tableSize: 4,      // 3人麻雀なら3、4人麻雀なら4
     
-    // 局・進行情報の管理用ステートを新設
+    // 局・進行情報の管理用ステート
     currentWind: 0,    // 0=東場, 1=南場
     currentKyoku: 1,   // 1局〜4局
     honbaCount: 0,     // 本場（積棒）の数
     kyotakuCount: 0    // 供託（リーチ棒）の数
 };
 
+// アガリ・テンパイ精算パネル用の一時状態
 let matchCalcState = {
-    winner: null,      
-    loser: null,       
-    type: 'ron',       // 'ron', 'tsumo', 'tenpai'（テンパイを追加）
-    scale: null        
+    winners: [],       // 聴牌者（複数人対応のため配列）
+    loser: null,       // 放銃者（ロン用）
+    type: 'ron',       // 'ron', 'tsumo', 'tenpai'
+    scale: null        // 'mangan', 'hanman' などの役満度クラス
 };
 
 // ドラッグ中の一時要素保持用
@@ -44,8 +45,6 @@ window.onload = function() {
 function updatePlayerInputs() {
     const count = parseInt(document.getElementById('member-count-select').value);
     const container = document.getElementById('player-inputs-container');
-    
-    // 入力途中のテキストが消えないよう一時回収
     const currentValues = Array.from(container.querySelectorAll('input')).map(i => i.value);
 
     container.innerHTML = '';
@@ -67,32 +66,20 @@ function submitRegistration() {
 
     for (let i = 0; i < count; i++) {
         const val = document.getElementById(`p-input-${i}`).value.trim();
-        if (!val) { 
-            alert('全員の名前を入力してください'); 
-            return; 
-        }
+        if (!val) { alert('全員の名前を入力してください'); return; }
         appState.allPlayers.push(val);
-        // 新規プレイヤーを通算成績枠に登録
-        if (appState.stats[val] === undefined) {
-            appState.stats[val] = 0;
-        }
+        if (appState.stats[val] === undefined) { appState.stats[val] = 0; }
     }
     
-    // ルール画面のドラッグ席決めエリアを初期構築
     setupDragAndDrop();
     switchScreen('screen-register', 'screen-rules');
 }
 
-// 三人打ち・四人打ちの変更トリガー
-function onGameModeChange() {
-    setupDragAndDrop();
-}
+function onGameModeChange() { setupDragAndDrop(); }
 
-// ルール設定のアコーディオン開閉制御
 function toggleAccordion() {
     const content = document.getElementById('accordion-content');
     const icon = document.getElementById('accordion-icon');
-    
     if (content.classList.contains('hidden-accordion')) {
         content.classList.remove('hidden-accordion');
         icon.classList.add('open');
@@ -101,17 +88,15 @@ function toggleAccordion() {
         icon.classList.remove('open');
     }
 }
-// ルール確認画面のドラッグ＆ドロップUI生成とイベント紐付け
+// ルール確認画面のドラッグ＆ドロップUI生成
 function setupDragAndDrop() {
     appState.tableSize = parseInt(document.getElementById('game-mode-select').value);
-    
     const pool = document.getElementById('pool-container');
     const seats = document.getElementById('seats-container');
     
     pool.innerHTML = '';
     seats.innerHTML = '';
 
-    // 1. 全参加者の未配属タグをプールに生成
     appState.allPlayers.forEach((name, index) => {
         const chip = document.createElement('div');
         chip.className = 'player-chip';
@@ -119,66 +104,41 @@ function setupDragAndDrop() {
         chip.setAttribute('draggable', 'true');
         chip.id = `chip-${index}`;
         
-        // PC用マウスイベント
         chip.addEventListener('dragstart', handleDragStart);
         chip.addEventListener('dragend', handleDragEnd);
-        
-        // スマホ用タッチイベント (Touch API対応)
         chip.addEventListener('touchstart', handleTouchStart, { passive: false });
         chip.addEventListener('touchmove', handleTouchMove, { passive: false });
         chip.addEventListener('touchend', handleTouchEnd);
-
         pool.appendChild(chip);
     });
 
-    // 2. 東・南・西・北（卓サイズに応じる）のドロップボックスを生成
     for (let i = 0; i < appState.tableSize; i++) {
         const seat = document.createElement('div');
         seat.className = 'seat-box';
         seat.id = `seat-${i}`;
-        
         seat.addEventListener('dragover', handleDragOver);
         seat.addEventListener('dragleave', handleDragLeave);
         seat.addEventListener('drop', handleDrop);
-
         seat.innerHTML = `<span class="seat-label active-wind">${windLabels[i]}家 席</span>`;
         seats.appendChild(seat);
     }
 }
 
-/* --- PC・スマホ共通：基本のマウスドラッグロジック --- */
-function handleDragStart(e) {
-    draggedElement = this;
-    this.style.opacity = '0.4';
-}
-
-function handleDragEnd(e) {
-    this.style.opacity = '1';
-    document.querySelectorAll('.seat-box').forEach(s => s.classList.remove('drag-over'));
-}
-
-function handleDragOver(e) {
-    e.preventDefault();
-    this.classList.add('drag-over');
-}
-
-function handleDragLeave() {
-    this.classList.remove('drag-over');
-}
-
+/* --- PC・共通マウスドラッグロジック --- */
+function handleDragStart(e) { draggedElement = this; this.style.opacity = '0.4'; }
+function handleDragEnd(e) { this.style.opacity = '1'; document.querySelectorAll('.seat-box').forEach(s => s.classList.remove('drag-over')); }
+function handleDragOver(e) { e.preventDefault(); this.classList.add('drag-over'); }
+function handleDragLeave() { this.classList.remove('drag-over'); }
 function handleDrop(e) {
     e.preventDefault();
     this.classList.remove('drag-over');
     if (!draggedElement) return;
 
-    // すでに他のタグが入っていたらプールに戻す
     const existingChip = this.querySelector('.player-chip');
-    if (existingChip) {
-        document.getElementById('pool-container').appendChild(existingChip);
-    }
+    if (existingChip) { document.getElementById('pool-container').appendChild(existingChip); }
     this.appendChild(draggedElement);
 }
-/* --- 📱 スマホ専用：Touchイベントによるドラッグ＆ドロップ偽装制御 --- */
+/* --- 📱 スマホ専用：Touchイベントドラッグ制御 --- */
 let touchOffsetLeft = 0;
 let touchOffsetTop = 0;
 
@@ -186,8 +146,6 @@ function handleTouchStart(e) {
     draggedElement = this;
     const touch = e.touches[0];
     const rect = this.getBoundingClientRect();
-    
-    // 指で触った位置と要素の左上カドのズレ（オフセット）を保持
     touchOffsetLeft = touch.clientX - rect.left;
     touchOffsetTop = touch.clientY - rect.top;
     
@@ -199,18 +157,16 @@ function handleTouchStart(e) {
 
 function handleTouchMove(e) {
     if (!draggedElement) return;
-    e.preventDefault(); // スマホ画面自体の勝手なスクロールを完全にブロック
-    
+    e.preventDefault();
     const touch = e.touches[0];
     moveAt(touch.clientX, touch.clientY);
 
-    // 現在の指の真下にある要素を検知して席ボックスを光らせる
     const elementTarget = document.elementFromPoint(touch.clientX, touch.clientY);
-    document.querySelectorAll('.seat-box').forEach(s => s.classList.remove('drag-over'));
+    document.querySelectorAll('.seat-box, .role-box').forEach(s => s.classList.remove('drag-over'));
     
     if (elementTarget) {
-        const seatBox = elementTarget.closest('.seat-box');
-        if (seatBox) seatBox.classList.add('drag-over');
+        const targetBox = elementTarget.closest('.seat-box, .winner-target, .loser-target');
+        if (targetBox) targetBox.classList.add('drag-over');
     }
 }
 
@@ -221,13 +177,7 @@ function moveAt(clientX, clientY) {
 
 function handleTouchEnd(e) {
     if (!draggedElement) return;
-    
-    // スタイルを元の状態（インライン配置）に復元
-    draggedElement.style.position = '';
-    draggedElement.style.zIndex = '';
-    draggedElement.style.left = '';
-    draggedElement.style.top = '';
-    draggedElement.style.width = '';
+    draggedElement.style.position = ''; draggedElement.style.zIndex = ''; draggedElement.style.left = ''; draggedElement.style.top = ''; draggedElement.style.width = '';
 
     const changedTouch = e.changedTouches[0];
     const elementTarget = document.elementFromPoint(changedTouch.clientX, changedTouch.clientY);
@@ -235,11 +185,8 @@ function handleTouchEnd(e) {
     if (elementTarget) {
         const seatBox = elementTarget.closest('.seat-box');
         if (seatBox) {
-            // 席にすでにいる人はプールに戻す
             const existingChip = seatBox.querySelector('.player-chip');
-            if (existingChip) {
-                document.getElementById('pool-container').appendChild(existingChip);
-            }
+            if (existingChip) { document.getElementById('pool-container').appendChild(existingChip); }
             seatBox.appendChild(draggedElement);
         } else {
             document.getElementById('pool-container').appendChild(draggedElement);
@@ -247,32 +194,37 @@ function handleTouchEnd(e) {
     } else {
         document.getElementById('pool-container').appendChild(draggedElement);
     }
-    
     document.querySelectorAll('.seat-box').forEach(s => s.classList.remove('drag-over'));
     draggedElement = null;
 }
 // 【ルール確認 ➡️ 対局開始】ボタンを押したとき
 function startMatch() {
     appState.activePlayers = [];
-    
-    // 配置された席のボックスから名前を順番に回収してメンバー確定
     for (let i = 0; i < appState.tableSize; i++) {
         const seatBox = document.getElementById(`seat-${i}`);
         const chip = seatBox.querySelector('.player-chip');
-        if (!chip) {
-            alert(`${windLabels[i]}家の席にプレイヤーを配置してください。`);
-            return;
-        }
+        if (!chip) { alert(`${windLabels[i]}家の席にプレイヤーを配置してください。`); return; }
         appState.activePlayers.push(chip.innerText);
     }
 
-    // 対局用プレイヤーリストの描画
+    appState.currentWind = 0;
+    appState.currentKyoku = 1;
+    appState.honbaCount = 0;
+    appState.kyotakuCount = 0;
+
+    updateUIKyokuDisplay();
     refreshMatchPlayerList();
     clearRoleSlots();
     switchScreen('screen-rules', 'screen-match');
 }
 
-// 対局中画面のプレイヤー表示を更新（精算ドラッグ用イベントも付与）
+function updateUIKyokuDisplay() {
+    document.getElementById('current-wind-label').innerText = appState.currentWind === 0 ? '東' : '南';
+    document.getElementById('current-kyoku-num').innerText = appState.currentKyoku;
+    document.getElementById('current-honba').innerText = `${appState.honbaCount} 本場`;
+    document.getElementById('current-kyotaku').innerText = `供託 ${appState.kyotakuCount}本`;
+}
+
 function refreshMatchPlayerList() {
     const listContainer = document.getElementById('match-players-list');
     listContainer.innerHTML = '';
@@ -280,34 +232,29 @@ function refreshMatchPlayerList() {
     for (let i = 0; i < appState.tableSize; i++) {
         const pName = appState.activePlayers[i];
         const wind = windLabels[i];
-        
-        if (appState.currentPoints[pName] === undefined) {
-            appState.currentPoints[pName] = 25000;
-        }
+        if (appState.currentPoints[pName] === undefined) { appState.currentPoints[pName] = 25000; }
 
         const div = document.createElement('div');
         div.className = 'match-row';
         div.id = `match-row-${pName}`;
         div.innerHTML = `
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1">
                 <span class="wind-badge">${wind}</span>
+                <button onclick="declareRiichi('${pName}')" class="btn-riichi">立直</button>
                 <div class="match-player-chip" id="m-chip-${i}" draggable="true">${pName}</div>
             </div>
             <input type="number" id="match-pt-${pName}" value="${appState.currentPoints[pName]}" step="100" class="input-score" onchange="appState.currentPoints['${pName}']=parseInt(this.value)||0">
         `;
 
-        // 対局中タグ用のドラッグ＆ドロップイベント設定
         const chip = div.querySelector('.match-player-chip');
         chip.addEventListener('dragstart', handleDragStart);
         chip.addEventListener('dragend', handleDragEnd);
         chip.addEventListener('touchstart', handleTouchStart, { passive: false });
         chip.addEventListener('touchmove', handleTouchMove, { passive: false });
         chip.addEventListener('touchend', handleMatchTouchEnd);
-
         listContainer.appendChild(div);
     }
 
-    // パネル側スロットのドロップ受付を登録
     const wBox = document.getElementById('role-winner-box');
     const lBox = document.getElementById('role-loser-box');
     [wBox, lBox].forEach(box => {
@@ -317,33 +264,48 @@ function refreshMatchPlayerList() {
     });
 }
 
-// 精算パネルのスロットへのドロップ（PCマウス用）
-function handleRoleDrop(e) {
-    e.preventDefault();
-    this.classList.remove('drag-over');
-    if (!draggedElement) return;
+function declareRiichi(pName) {
+    if (appState.currentPoints[pName] < 1000) { alert('持ち点が1,000点未満のため立直できません'); return; }
+    appState.currentPoints[pName] -= 1000;
+    appState.kyotakuCount += 1;
+    updateUIKyokuDisplay();
+    refreshMatchPlayerList();
+}
 
+function handleRoleDrop(e) {
+    e.preventDefault(); this.classList.remove('drag-over'); if (!draggedElement) return;
     const slot = this.querySelector('.role-slot');
-    slot.innerHTML = '';
-    
-    const clone = draggedElement.cloneNode(true);
-    clone.style.position = ''; clone.style.zIndex = ''; clone.style.width = '';
-    slot.appendChild(clone);
+    const name = draggedElement.innerText;
 
     if (this.classList.contains('winner-target')) {
-        matchCalcState.winner = draggedElement.innerText;
+        if (matchCalcState.type === 'tenpai') {
+            if (!matchCalcState.winners.includes(name)) {
+                if (matchCalcState.winners.length === 0) slot.innerHTML = '';
+                matchCalcState.winners.push(name);
+                const clone = draggedElement.cloneNode(true);
+                clone.style.position = ''; clone.style.zIndex = ''; clone.style.width = '';
+                slot.appendChild(clone);
+            }
+        } else {
+            matchCalcState.winners = [name]; slot.innerHTML = '';
+            const clone = draggedElement.cloneNode(true);
+            clone.style.position = ''; clone.style.zIndex = ''; clone.style.width = '';
+            slot.appendChild(clone);
+        }
     } else {
-        matchCalcState.loser = draggedElement.innerText;
+        matchCalcState.loser = name; slot.innerHTML = '';
+        const clone = draggedElement.cloneNode(true);
+        clone.style.position = ''; clone.style.zIndex = ''; clone.style.width = '';
+        slot.appendChild(clone);
     }
 }
 
-// 精算パネルのスロットへのドロップ（スマホタッチ用）
 function handleMatchTouchEnd(e) {
     if (!draggedElement) return;
     draggedElement.style.position = ''; draggedElement.style.zIndex = ''; draggedElement.style.left = ''; draggedElement.style.top = ''; draggedElement.style.width = '';
-
     const changedTouch = e.changedTouches[0];
     const targetEl = document.elementFromPoint(changedTouch.clientX, changedTouch.clientY);
+    const name = draggedElement.innerText;
     
     if (targetEl) {
         const winnerBox = targetEl.closest('.winner-target');
@@ -351,34 +313,25 @@ function handleMatchTouchEnd(e) {
         
         if (winnerBox) {
             const slot = winnerBox.querySelector('.role-slot');
-            slot.innerHTML = `<div class="match-player-chip">${draggedElement.innerText}</div>`;
-            matchCalcState.winner = draggedElement.innerText;
+            if (matchCalcState.type === 'tenpai') {
+                if (!matchCalcState.winners.includes(name)) {
+                    if (matchCalcState.winners.length === 0) slot.innerHTML = '';
+                    matchCalcState.winners.push(name);
+                    slot.innerHTML += `<div class="match-player-chip">${name}</div>`;
+                }
+            } else {
+                matchCalcState.winners = [name];
+                slot.innerHTML = `<div class="match-player-chip">${name}</div>`;
+            }
         } else if (loserBox) {
             const slot = loserBox.querySelector('.role-slot');
-            slot.innerHTML = `<div class="match-player-chip">${draggedElement.innerText}</div>`;
-            matchCalcState.loser = draggedElement.innerText;
+            matchCalcState.loser = name;
+            slot.innerHTML = `<div class="match-player-chip">${name}</div>`;
         }
     }
-    document.querySelectorAll('.role-box').forEach(b => b.classList.remove('drag-over'));
-    draggedElement = null;
+    document.querySelectorAll('.role-box').forEach(b => b.classList.remove('drag-over')); draggedElement = null;
 }
 
-// startMatch関数の内部の先頭に以下を追加
-appState.currentWind = 0;
-appState.currentKyoku = 1;
-appState.honbaCount = 0;
-appState.kyotakuCount = 0;
-updateUIKyokuDisplay();
-
-// 局・本場・供託の画面上部表示を同期する関数（修正版）
-function updateUIKyokuDisplay() {
-    document.getElementById('current-wind-label').innerText = appState.currentWind === 0 ? '東' : '南';
-    document.getElementById('current-kyoku-num').innerText = appState.currentKyoku;
-    document.getElementById('current-honba').innerText = `${appState.honbaCount} 本場`;
-    document.getElementById('current-kyotaku').innerText = `供託 ${appState.kyotakuCount}本`; // 🚨ここを書き換え
-}
-
-// 既存の setAgariType 関数を以下に丸ごと差し替え
 function setAgariType(type) {
     matchCalcState.type = type;
     document.getElementById('btn-agari-ron').classList.toggle('active', type === 'ron');
@@ -390,11 +343,13 @@ function setAgariType(type) {
     const scaleBox = document.getElementById('panel-scale-box');
     const detailBox = document.getElementById('panel-detail-box');
 
+    clearRoleSlotsOnly();
+
     if (type === 'tenpai') {
-        wLabel.innerText = '⭕ 聴牌者 (テンパイ)';
-        lLabel.innerText = '❌ 不聴者 (ノーテン)';
-        document.getElementById('role-loser-box').style.opacity = '1';
-        scaleBox.classList.add('hidden'); // テンパイ時は翻・符選択を隠す
+        wLabel.innerText = '⭕ 聴牌者 (ドロップした人以外はノーテン)';
+        lLabel.innerText = '❌ （聴牌時は不使用）';
+        document.getElementById('role-loser-box').style.opacity = '0.2';
+        scaleBox.classList.add('hidden');
         detailBox.classList.add('hidden');
     } else {
         wLabel.innerText = '🏆 和了者 (アガリ)';
@@ -405,50 +360,55 @@ function setAgariType(type) {
     }
 }
 
-// clearRoleSlots関数を以下に差し替え
-function clearRoleSlots() {
-    document.getElementById('slot-winner').innerText = 'ここにプレイヤーをドロップ';
-    document.getElementById('slot-loser').innerText = 'ここにプレイヤーをドロップ';
-    document.querySelectorAll('.btn-scale').forEach(b => b.classList.remove('active'));
-    setAgariType('ron'); 
-    matchCalcState = { winner: null, loser: null, type: 'ron', scale: null };
-}
-
-// 満貫・跳満・倍満などの選択状態管理
 function selectManganScale(scale) {
     document.querySelectorAll('.btn-scale').forEach(b => b.classList.remove('active'));
-    if (matchCalcState.scale === scale) {
-        matchCalcState.scale = null;
-    } else {
-        matchCalcState.scale = scale;
-        event.target.classList.add('active');
-    }
+    if (matchCalcState.scale === scale) { matchCalcState.scale = null; } 
+    else { matchCalcState.scale = scale; event.target.classList.add('active'); }
 }
 
-// 【計算して点数を移動する】実行コア
-function executePointTransfer() {
-    if (!matchCalcState.winner) { alert('対象プレイヤーを設定してください'); return; }
-    if (matchCalcState.type === 'ron' && !matchCalcState.loser) { alert('ロンの場合は放銃者を設定してください'); return; }
-    if (matchCalcState.winner === matchCalcState.loser) { alert('同じプレイヤーを両方に設定することはできません'); return; }
+function clearRoleSlotsOnly() {
+    document.getElementById('slot-winner').innerText = 'ここにプレイヤーをドロップ';
+    document.getElementById('slot-loser').innerText = 'ここにプレイヤーをドロップ';
+    matchCalcState.winners = []; matchCalcState.loser = null; matchCalcState.scale = null;
+    document.querySelectorAll('.btn-scale').forEach(b => b.classList.remove('active'));
+}
 
-    const currentOyaName = appState.activePlayers[0]; // 配列の先頭が現在の親
-    const isWinnerOya = (currentOyaName === matchCalcState.winner);
+function clearRoleSlots() { clearRoleSlotsOnly(); setAgariType('ron'); }
+// ⚡ 点数移動計算コア
+function executePointTransfer() {
+    if (matchCalcState.type !== 'tenpai' && matchCalcState.winners.length === 0) { alert('和了者(アガリ)を設定してください'); return; }
+    if (matchCalcState.type === 'ron' && !matchCalcState.loser) { alert('ロンの場合は放銃者を設定してください'); return; }
+    
+    const currentOyaName = appState.activePlayers[0]; // 東南西北の先頭が現在の親
     let isRenchan = false; 
 
-    // --- パターンA: 聴牌（テンパイ流局）の処理 ---
+    // --- 💡 1. 聴牌（テンパイ流局）の複数精算処理 ---
     if (matchCalcState.type === 'tenpai') {
-        if (!matchCalcState.loser) { alert('ノーテンのプレイヤーも設定してください'); return; }
-        
-        // テンパイ者に+1500点、不聴者に-1500点移動
-        appState.currentPoints[matchCalcState.winner] += 1500;
-        appState.currentPoints[matchCalcState.loser] -= 1500;
+        const tenpaiCount = matchCalcState.winners.length;
+        const allActive = appState.activePlayers;
+        const noTenCount = allActive.length - tenpaiCount;
 
-        // 親がテンパイしていれば連荘（親キープ）
-        if (isWinnerOya) { isRenchan = true; }
-        appState.honbaCount += 1; 
+        if (tenpaiCount > 0 && noTenCount > 0) {
+            let plusScore = 0; let minusScore = 0;
+            if (tenpaiCount === 1) { plusScore = 3000; minusScore = 3000 / noTenCount; }
+            if (tenpaiCount === 2) { plusScore = 1500; minusScore = 1500; }
+            if (tenpaiCount === 3) { plusScore = 1000; minusScore = 3000; }
+
+            allActive.forEach(pName => {
+                if (matchCalcState.winners.includes(pName)) { appState.currentPoints[pName] += plusScore; } 
+                else { appState.currentPoints[pName] -= minusScore; }
+            });
+        }
+        
+        // 聴牌連荘：親がテンパイ配列に含まれていれば連荘
+        if (matchCalcState.winners.includes(currentOyaName)) { isRenchan = true; }
+        appState.honbaCount += 1;
+        alert(`流局精算を完了しました（テンパイ: ${tenpaiCount}人）`);
     } 
-    // --- パターンB: 通常の和了（ロン・ツモ）の処理 ---
+    // --- 💡 2. 通常の和了（ロン・ツモ）の精算処理 ---
     else {
+        const winnerName = matchCalcState.winners[0];
+        const isWinnerOya = (currentOyaName === winnerName);
         let pointsWinnerGets = 0; let pointsOyaPays = 0; let pointsKoPays = 0;
 
         if (matchCalcState.scale) {
@@ -466,7 +426,7 @@ function executePointTransfer() {
             const han = parseInt(document.getElementById('select-han').value);
             if (han === 1) pointsWinnerGets = isWinnerOya ? 1500 : 1000;
             if (han === 2) pointsWinnerGets = isWinnerOya ? 2900 : 2000;
-            if (han === 3) pointsWinnerGets = isWinnerGets = isWinnerOya ? 5800 : 3900;
+            if (han === 3) pointsWinnerGets = isWinnerOya ? 5800 : 3900;
             if (han === 4) pointsWinnerGets = isWinnerOya ? 11600 : 7700;
 
             if (matchCalcState.type === 'tsumo') {
@@ -475,25 +435,25 @@ function executePointTransfer() {
             }
         }
 
-        // 積み棒計算（1本場につきロン+300点、ツモは全員から+100点）
+        // 積み棒加算
         const honbaValue = appState.honbaCount * 300;
         const honbaTsumoValue = appState.honbaCount * 100;
 
         if (matchCalcState.type === 'ron') {
-            appState.currentPoints[matchCalcState.winner] += (pointsWinnerGets + honbaValue);
+            appState.currentPoints[winnerName] += (pointsWinnerGets + honbaValue);
             appState.currentPoints[matchCalcState.loser] -= (pointsWinnerGets + honbaValue);
         } else {
-            appState.currentPoints[matchCalcState.winner] += (pointsWinnerGets + (appState.tableSize - 1) * honbaTsumoValue);
+            appState.currentPoints[winnerName] += (pointsWinnerGets + (appState.tableSize - 1) * honbaTsumoValue);
             appState.activePlayers.forEach(pName => {
-                if (pName === matchCalcState.winner) return;
+                if (pName === winnerName) return;
                 if (currentOyaName === pName) { appState.currentPoints[pName] -= (pointsOyaPays + honbaTsumoValue); } 
                 else { appState.currentPoints[pName] -= (pointsKoPays + honbaTsumoValue); }
             });
         }
 
-        // 供託回収
+        // 供託（立直棒）総取り
         if (appState.kyotakuCount > 0) {
-            appState.currentPoints[matchCalcState.winner] += (appState.kyotakuCount * 1000);
+            appState.currentPoints[winnerName] += (appState.kyotakuCount * 1000);
             appState.kyotakuCount = 0;
         }
 
@@ -501,110 +461,70 @@ function executePointTransfer() {
         else { isRenchan = false; appState.honbaCount = 0; }
     }
 
-    // --- 親移動・局進行の自動処理 ---
+    // --- 🔄 親移動・局進行の自動処理 ---
     if (isRenchan) {
-        alert('親の連荘です！(本場が加算されました)');
+        alert('親の連荘です！(本場が更新されました)');
     } else {
-        // 先頭（親）を後ろに回すことで次の人に親権を移動（輪荘）
         const shiftedPlayer = appState.activePlayers.shift();
         appState.activePlayers.push(shiftedPlayer);
-        
         appState.currentKyoku += 1;
-        if (appState.currentKyoku > 4) {
-            appState.currentKyoku = 1; appState.currentWind += 1; 
-        }
+        if (appState.currentKyoku > 4) { appState.currentKyoku = 1; appState.currentWind += 1; }
         alert('親が流れました。次局へ移行します。');
     }
 
-    updateUIKyokuDisplay();
-    refreshMatchPlayerList();
-    clearRoleSlots();
+    updateUIKyokuDisplay(); refreshMatchPlayerList(); clearRoleSlots();
 }
 
-// サイコロナビ
 function rollDice() {
-    const d1 = Math.floor(Math.random() * 6) + 1;
-    const d2 = Math.floor(Math.random() * 6) + 1;
-    const sum = d1 + d2;
+    const d1 = Math.floor(Math.random() * 6) + 1; const d2 = Math.floor(Math.random() * 6) + 1; const sum = d1 + d2;
     document.getElementById('dice-result').innerText = `出目: ${sum} (${d1}, ${d2})`;
-
     let targetWind = '';
-    if ([1, 5, 9].includes(sum)) targetWind = '東家(自家)';
+    if ([5, 9].includes(sum)) targetWind = '東家(自家)';
     else if ([2, 6, 10].includes(sum)) targetWind = '南家(右面)';
     else if ([3, 7, 11].includes(sum)) targetWind = '西家(対面)';
     else if ([4, 8, 12].includes(sum)) targetWind = '北家(左面)';
-
     document.getElementById('haipai-navi').innerText = `${targetWind}の山、右から${sum}列残して開門`;
 }
 
-// 【半荘終了】ポイント一括精算とウマオカ連動
 function endMatch() {
     let currentScores = [];
     for (let i = 0; i < appState.tableSize; i++) {
-        const pName = appState.activePlayers[i];
-        const score = appState.currentPoints[pName];
+        const pName = appState.activePlayers[i]; const score = appState.currentPoints[pName];
         currentScores.push({ name: pName, score: score, index: i });
     }
-
     currentScores.sort((a, b) => b.score - a.score || a.index - b.index);
 
-    const baseReturn = 30000;
-    const is3人 = appState.tableSize === 3;
-    
+    const baseReturn = 30000; const is3人 = appState.tableSize === 3;
     const umaRule = document.getElementById('rule-uma').value;
-    let uma = is3人 ? [0, 0, 0] : [0, 0, 0, 0]; 
-    
+    let uma = is3人 ? [0, 0, 0] : [0, 0, 0, 0];
     if (umaRule === '10-30') uma = is3人 ? [20, 0, -20] : [30, 10, -10, -30];
     if (umaRule === '10-20') uma = is3人 ? [10, 0, -10] : [20, 10, -10, -20];
-
     const oka = is3人 ? 15 : 20;
 
     let calculatedRows = [];
     currentScores.forEach((item, rank) => {
-        let rawPt = (item.score - baseReturn) / 1000;
-        let roundedPt = Math.round(rawPt);
-        let finalPt = roundedPt + uma[rank];
-        if (rank === 0) finalPt += oka;
-
+        let rawPt = (item.score - baseReturn) / 1000; let roundedPt = Math.round(rawPt);
+        let finalPt = roundedPt + uma[rank]; if (rank === 0) finalPt += oka;
         calculatedRows.push({ rank: rank + 1, name: item.name, score: item.score, pt: finalPt });
         appState.stats[item.name] += finalPt;
     });
 
     appState.gameCount++;
-
-    const tbody = document.getElementById('result-table-body');
-    tbody.innerHTML = '';
+    const tbody = document.getElementById('result-table-body'); tbody.innerHTML = '';
     calculatedRows.forEach(row => {
-        const tr = document.createElement('tr');
-        const ptClass = row.pt >= 0 ? 'pt-plus' : 'pt-minus';
-        const ptSign = row.pt > 0 ? '+' : '';
-        tr.innerHTML = `
-            <td><strong>${row.rank}位</strong></td><td>${row.name}</td>
-            <td class="text-right font-mono">${row.score.toLocaleString()}</td>
-            <td class="text-right font-mono ${ptClass}">${ptSign}${row.pt.toFixed(1)}</td>
-        `;
+        const tr = document.createElement('tr'); const ptClass = row.pt >= 0 ? 'pt-plus' : 'pt-minus'; const ptSign = row.pt > 0 ? '+' : '';
+        tr.innerHTML = `<td><strong>${row.rank}位</strong></td><td>${row.name}</td><td class="text-right font-mono">${row.score.toLocaleString()}</td><td class="text-right font-mono ${ptClass}">${ptSign}${row.pt.toFixed(1)}</td>`;
         tbody.appendChild(tr);
     });
-
     switchScreen('screen-match', 'screen-result');
 }
 
-// 【成績表を見る】（全画面表示）
 function openStats() {
-    const tbody = document.getElementById('stats-table-body');
-    tbody.innerHTML = '';
-    let sortedStats = Object.keys(appState.stats).map(name => {
-        return { name: name, pt: appState.stats[name] };
-    }).sort((a, b) => b.pt - a.pt);
-
+    const tbody = document.getElementById('stats-table-body'); tbody.innerHTML = '';
+    let sortedStats = Object.keys(appState.stats).map(name => { return { name: name, pt: appState.stats[name] }; }).sort((a, b) => b.pt - a.pt);
     sortedStats.forEach(item => {
-        const tr = document.createElement('tr');
-        const ptClass = item.pt >= 0 ? 'pt-plus' : 'pt-minus';
-        const ptSign = item.pt > 0 ? '+' : '';
-        tr.innerHTML = `
-            <td><strong>${item.name}</strong></td><td class="text-center font-mono">${appState.gameCount}</td>
-            <td class="text-right font-mono ${ptClass}">${ptSign}${item.pt.toFixed(1)}</td>
-        `;
+        const tr = document.createElement('tr'); const ptClass = item.pt >= 0 ? 'pt-plus' : 'pt-minus'; const ptSign = item.pt > 0 ? '+' : '';
+        tr.innerHTML = `<td><strong>${item.name}</strong></td><td class="text-center font-mono">${appState.gameCount}</td><td class="text-right font-mono ${ptClass}">${ptSign}${item.pt.toFixed(1)}</td>`;
         tbody.appendChild(tr);
     });
     document.getElementById('screen-stats').classList.remove('hidden');

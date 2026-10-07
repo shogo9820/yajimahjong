@@ -605,3 +605,29 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
 /* 精算パネルを縦に大きく広げるための追加設定 */
 .flex-col { flex-direction: column; }
 .flex-1 { flex: 1; }
+
+/* 🌟 立直ボタンとスロットの複数ドロップ対応スタイル */
+.btn-riichi {
+    background-color: #334155;
+    border: 1px solid #475569;
+    color: #e2e8f0;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-right: 8px;
+    transition: all 0.1s;
+}
+.btn-riichi:active {
+    background-color: #f59e0b;
+    color: #000000;
+}
+/* タグが横並びや複数配置されても枠を広げる設定 */
+.role-slot.flex-wrap-gap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px;
+    justify-content: center;
+}

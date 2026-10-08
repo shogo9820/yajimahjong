@@ -500,36 +500,53 @@ function handleMatchTouchEnd(e) {
 
 function setAgariType(type) {
   matchCalcState.type = type;
-  document
-    .getElementById("btn-agari-ron")
-    .classList.toggle("active", type === "ron");
-  document
-    .getElementById("btn-agari-tsumo")
-    .classList.toggle("active", type === "tsumo");
-  document
-    .getElementById("btn-agari-tenpai")
-    .classList.toggle("active-tenpai", type === "tenpai");
 
-  const wLabel = document.getElementById("role-winner-label");
-  const lLabel = document.getElementById("role-loser-label");
-  const scaleBox = document.getElementById("panel-scale-box");
-  const detailBox = document.getElementById("panel-detail-box");
+  // 🎯 縦持ち用と横持ち用（ls-）の両方のボタンのactiveクラスを同時に切り替え
+  ["btn-agari-ron", "ls-btn-agari-ron"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle("active", type === "ron");
+  });
+  ["btn-agari-tsumo", "ls-btn-agari-tsumo"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle("active", type === "tsumo");
+  });
+  ["btn-agari-tenpai", "ls-btn-agari-tenpai"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle("active-tenpai", type === "tenpai");
+  });
+
   clearRoleSlotsOnly();
 
-  if (type === "tenpai") {
-    wLabel.innerText = "⭕ 聴牌者 (それ以外はノーテン)";
-    lLabel.innerText = "❌ （聴牌時は不使用）";
-    document.getElementById("role-loser-box").style.opacity = "0.2";
-    scaleBox.classList.add("hidden");
-    detailBox.classList.add("hidden");
-  } else {
-    wLabel.innerText = "🏆 和了者 (アガリ)";
-    lLabel.innerText = "🎯 放銃者 (ロンの場合)";
-    document.getElementById("role-loser-box").style.opacity =
-      type === "tsumo" ? "0.3" : "1";
-    scaleBox.classList.remove("hidden");
-    detailBox.classList.remove("hidden");
-  }
+  const isTenpai = (type === "tenpai");
+  const isTsumo = (type === "tsumo");
+
+  // 🎯 和了・放銃ラベルの切り替え（縦・横両方）
+  const winnerTexts = isTenpai ? "⭕ 聴牌者 (それ以外はノーテン)" : "🏆 和了者 (アガリ)";
+  const loserTexts  = isTenpai ? "❌ （聴牌時は不使用）" : "🎯 放銃者 (ロンの場合)";
+
+  ["role-winner-label", "ls-role-winner-label"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerText = winnerTexts;
+  });
+  ["role-loser-label", "ls-role-loser-label"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerText = loserTexts;
+  });
+
+  // 🎯 放銃ボックスの透明度（縦・横両方）
+  ["role-loser-box", "ls-role-loser-box"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.opacity = isTenpai ? "0.2" : (isTsumo ? "0.3" : "1");
+  });
+
+  // 🎯 満貫クラス＆翻符ブロックの表示・非表示（縦・横両方）
+  ["panel-scale-box", "ls-panel-scale-box", "panel-detail-box", "ls-panel-detail-box"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      if (isTenpai) el.classList.add("hidden");
+      else el.classList.remove("hidden");
+    }
+  });
 }
 
 function selectManganScale(scale) {

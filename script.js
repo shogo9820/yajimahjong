@@ -111,6 +111,7 @@ window.onload = function () {
 };
 
 // メンバー登録画面の名簿選択＆名前入力フォームの動的生成
+// メンバー登録画面のプレイヤー入力行を正しくID連番で動的生成する関数
 function updatePlayerInputs() {
   const container = document.getElementById("player-inputs-container");
   if (!container) return;
@@ -118,14 +119,18 @@ function updatePlayerInputs() {
   const room = appState.rooms[appState.currentRoomName] || { players: {} };
   const pIds = Object.keys(room.players);
   
-  // 選択している人数（卓サイズ等）に関わらず、ルームに紐づく全員を自動ロードして一覧化
-  const count = Math.max(pIds.length, parseInt(document.getElementById("member-count-select")?.value || 4));
-  document.getElementById("member-count-select").value = count;
+  // セレクトボックスで選ばれている現在の人数を取得
+  const countSelect = document.getElementById("member-count-select");
+  const count = countSelect ? parseInt(countSelect.value) : 4;
 
   container.innerHTML = "";
   for (let i = 0; i < count; i++) {
+    // 既存のルームメンバーがいる場合はそのIDを使い、足りない新規枠は自動連番にする
     const pId = pIds[i] || "";
     const pName = pId ? room.players[pId].name : "";
+    
+    // 表示用のID番号（既存IDがあればそれを使い、なければ新しく割り振る予定の連番を表示）
+    const displayId = pId ? pId : (i + 1);
 
     const div = document.createElement("div");
     div.className = "input-row";
@@ -135,8 +140,8 @@ function updatePlayerInputs() {
     div.style.marginBottom = "8px";
 
     div.innerHTML = `
-      <span class="no-badge" style="min-width:50px;">ID: ${pId || (i + 1)}</span>
-      <input type="text" id="p-input-${i}" data-player-id="${pId}" placeholder="プレイヤー名" value="${pName}" class="form-input" style="flex:1;">
+      <span class="no-badge" style="min-width:65px; text-align:center;">ID: ${displayId}</span>
+      <input type="text" id="p-input-${i}" data-player-id="${pId}" placeholder="プレイヤー名を入力" value="${pName || "プレイヤー" + (i + 1)}" class="form-input" style="flex:1;">
       ${pId ? `<button onclick="deleteRoomPlayer(\${pId})" class="btn-riichi" style="background:#f43f5e; border:none; margin:0; padding:10px 14px; border-radius:12px; color:white; font-weight:bold;">❌</button>` : ""}
     `;
     container.appendChild(div);

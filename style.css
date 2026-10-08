@@ -768,30 +768,51 @@ body {
     opacity: 0.5;
   }
 
-    /* 📍 もし座席ボックスの「箱の内側（下フチ）」にきれいに収めたい場合の設定 */
+  /* ==========================================================================
+     🀄 横持ち卓（Landscape）：座席ボックスから真ん中（内側）に向かって置く設定
+     ========================================================================== */
+
+  /* 共通の立直棒ベース：必ず seatEl の中に表示されるようにします */
+  .riichi-stick {
+    position: absolute !important;
+    width: 60px !important;
+    height: 6px !important;
+    background-color: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 3px !important;
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.6) !important;
+    z-index: 10;
+  }
+
+  /* 手前の席 (Seat 0): 箱の上フチ（真ん中向き）に配置 */
   .seat-bottom .riichi-stick {
-    bottom: 4px; /* 箱の内側の下フチに配置 */
-    left: 50%;
-    transform: translateX(-50%);
+    top: -16px !important;
+    bottom: auto !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
   }
 
+  /* 奥の席 (Seat 2): 箱自体が180度反転しているため、箱の上フチ（真ん中向き）に配置 */
   .seat-top .riichi-stick {
-    top: 4px; /* 180度ひっくり返っているので、内側の下フチ（コード上はtop）に配置 */
-    left: 50%;
-    transform: translateX(-50%);
+    top: -16px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
   }
 
-  /* 左右の席は箱が90度回転しているため、内側の下フチになるように調整します */
+  /* 左の席 (Seat 3): 箱が90度回転しているため、右フチ（中央向き）に寄せて縦向きに配置 */
   .seat-left .riichi-stick {
-    top: 50%;
-    left: 6px; /* 箱の内側（回転後の下フチ）に収める */
-    transform: translateY(-50%) rotate(90deg);
+    top: 50% !important;
+    right: -16px !important;
+    left: auto !important;
+    transform: translateY(-50%) rotate(90deg) !important;
   }
 
+  /* 右の席 (Seat 1): 箱が-90度回転しているため、左フチ（中央向き）に寄せて縦向きに配置 */
   .seat-right .riichi-stick {
-    top: 50%;
-    right: 6px; /* 箱の内側（回転後の下フチ）に収める */
-    transform: translateY(-50%) rotate(90deg);
+    top: 50% !important;
+    left: -16px !important;
+    right: auto !important;
+    transform: translateY(-50%) rotate(90deg) !important;
   }
 
   .table-center-hub {

@@ -834,3 +834,25 @@ body {
 #screen-stats.hidden {
   display: none !important;
 }
+
+/* style.css の末尾に追加、または調整 */
+.seat-bottom .riichi-stick {
+  bottom: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.seat-top .riichi-stick {
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.seat-left .riichi-stick {
+  left: -25px;
+  top: 50%;
+  transform: translateY(-50%) rotate(90deg);
+}
+.seat-right .riichi-stick {
+  right: -25px;
+  top: 50%;
+  transform: translateY(-50%) rotate(90deg);
+}

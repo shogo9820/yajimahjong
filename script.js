@@ -526,7 +526,7 @@ function updateUIKyokuDisplay() {
   if (hubHonba) hubHonba.innerText = `${appState.honbaCount}本場 / 供託${appState.kyotakuCount}本`;
 }
 
-// 対局画面の更新（IDをキーにして名前を引く形式）
+// 対局画面の更新（立直棒のHTML生成＆4人3打ち完全対応版）
 function refreshMatchPlayerList() {
   const modeSelect = document.getElementById("game-mode-select");
   const modeVal = modeSelect ? modeSelect.value : "4";
@@ -541,13 +541,17 @@ function refreshMatchPlayerList() {
       const wind = windLabels[i];
       if (appState.currentPoints[pId] === undefined) appState.currentPoints[pId] = 25000;
 
+      // 縦画面でも立直しているのが分かるように、立直中の場合は「is-riichi」クラスを付与
+      const isRiichi = appState.riichiPlayers.includes(pId);
+      const riichiClass = isRiichi ? "is-riichi" : "";
+
       const div = document.createElement("div");
-      div.className = "match-row";
+      div.className = `match-row ${riichiClass}`;
       div.id = `match-row-${pId}`;
       div.innerHTML = `
         <div class="flex items-center gap-1">
           <span class="wind-badge">${wind}</span>
-          <button onclick="declareRiichi('${pId}')" class="btn-riichi">立直</button>
+          <button onclick="declareRiichi('${pId}')" class="btn-riichi" ${isRiichi ? 'disabled' : ''}>立直</button>
           <div class="match-player-chip" id="m-chip-${pId}" data-player-id="${pId}" draggable="true">${getPlayerName(pId)}</div>
         </div>
         <input type="number" id="match-pt-${pId}" value="${appState.currentPoints[pId]}" step="100" class="input-score" onchange="syncManualScore('${pId}', this.value)">
@@ -558,6 +562,7 @@ function refreshMatchPlayerList() {
       listContainer.appendChild(div);
     }
   }
+
   // 2. 💻 横持ち用卓
   const oyaOffset = (appState.currentKyoku - 1) % 4;
 
@@ -565,16 +570,21 @@ function refreshMatchPlayerList() {
     const seatEl = document.getElementById(seatId);
     if (!seatEl) return;
 
+    // 純粋な3人打ち（サンマ）で左の席を使わない場合
     if (isSanma && modeVal !== "4-3打ち" && physicalIndex === 3) {
       seatEl.className = "table-seat seat-left seat-vacant";
       seatEl.innerHTML = `
         <div class="seat-header-row justify-center py-2"><span class="vacant-badge" style="font-size:11px;color:#94a3b8;">不使用</span></div>
         <div class="seat-score-row"><span class="seat-score-text" style="color:#475569;font-size:18px !important;">---</span></div>
+        <!-- バグ防止用に非表示の棒を置いておく -->
+        <div class="riichi-stick hidden" style="position: absolute; width: 60px; height: 6px; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 3px; box-shadow: 0 0 4px rgba(255,255,255,0.5);"></div>
       `;
       return;
     }
 
     let pId = appState.activePlayers[physicalIndex];
+
+    // 🚨【4人3打ち対応】左の席が「控え（お休み）」プレイヤーの場合
     if (modeVal === "4-3打ち" && physicalIndex === 3) {
       pId = appState.subPlayer;
       const subScore = appState.currentPoints[pId] !== undefined ? appState.currentPoints[pId] : 25000;
@@ -585,10 +595,13 @@ function refreshMatchPlayerList() {
           <span class="match-player-chip" style="font-size:12px;background:transparent;border:none;max-width:100px;text-overflow:ellipsis;overflow:hidden;">${getPlayerName(pId)}</span>
         </div>
         <div class="seat-score-row"><span class="seat-score-text" style="color:#64748b;font-size:20px !important;">${subScore.toLocaleString()}</span></div>
+        <!-- 交代して復帰した時のために、控え席にもあらかじめ立直棒のHTML要素を仕込んでおく -->
+        <div class="riichi-stick hidden" style="position: absolute; width: 60px; height: 6px; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 3px; box-shadow: 0 0 4px rgba(255,255,255,0.5);"></div>
       `;
       return;
     }
 
+    // 通常の対局席の描画
     seatEl.classList.remove("seat-vacant");
     const windIndex = (physicalIndex - oyaOffset + 4) % 4;
     const currentWind = windLabels[windIndex];
@@ -604,22 +617,23 @@ function refreshMatchPlayerList() {
         <div class="match-player-chip" id="ls-chip-${pId}" data-player-id="${pId}" draggable="true" style="font-size:12px;padding:2px 6px;">${getPlayerName(pId)}</div>
       </div>
       <div class="seat-score-row"><span class="seat-score-text">${pScore.toLocaleString()}</span></div>
+      
+      <!-- 🚨 卓上の立直棒HTML要素 -->
+      <div class="riichi-stick hidden" style="position: absolute; width: 60px; height: 6px; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 3px; box-shadow: 0 0 4px rgba(255,255,255,0.5);"></div>
     `;
 
     const chip = seatEl.querySelector(".match-player-chip");
     bindChipEvents(chip);
 
-        // 通常席の描画ロジック（既存コード）の末尾あたり、bindChipEvents(chip); のすぐ下付近に追記
+    // 立直棒の表示・非表示リアルタイム制御
     const stick = seatEl.querySelector(".riichi-stick");
     if (stick) {
-      // 今局、このプレイヤーがすでに立直済みリストに入っていれば棒を表示、いなければ非表示
       if (appState.riichiPlayers.includes(pId)) {
         stick.classList.remove("hidden");
       } else {
         stick.classList.add("hidden");
       }
     }
-
   });
 }
 

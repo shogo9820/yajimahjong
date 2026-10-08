@@ -119,8 +119,7 @@ window.onload = function () {
   updatePlayerInputs();
 };
 
-// メンバー登録画面の名簿選択＆名前入力フォームの動的生成
-// メンバー登録画面のプレイヤー入力行を正しくID連番で動的生成する関数
+// メンバー登録画面の入力行を生成する関数（❌ボタン撤去完全版）
 function updatePlayerInputs() {
   const container = document.getElementById("player-inputs-container");
   if (!container) return;
@@ -128,17 +127,17 @@ function updatePlayerInputs() {
   const room = appState.rooms[appState.currentRoomName] || { players: {} };
   const pIds = Object.keys(room.players);
   
-  // セレクトボックスで選ばれている現在の人数を取得
   const countSelect = document.getElementById("member-count-select");
-  const count = countSelect ? parseInt(countSelect.value) : 4;
+  let count = countSelect ? parseInt(countSelect.value) : 4;
+  if (pIds.length > count) {
+    count = pIds.length;
+    if (countSelect) countSelect.value = count;
+  }
 
   container.innerHTML = "";
   for (let i = 0; i < count; i++) {
-    // 既存のルームメンバーがいる場合はそのIDを使い、足りない新規枠は自動連番にする
     const pId = pIds[i] || "";
     const pName = pId ? room.players[pId].name : "";
-    
-    // 表示用のID番号（既存IDがあればそれを使い、なければ新しく割り振る予定の連番を表示）
     const displayId = pId ? pId : (i + 1);
 
     const div = document.createElement("div");
@@ -148,56 +147,12 @@ function updatePlayerInputs() {
     div.style.gap = "8px";
     div.style.marginBottom = "8px";
 
+    // 🚨 ボタンをなくし、IDと名前入力欄だけのすっきりした見た目に修正
     div.innerHTML = `
       <span class="no-badge" style="min-width:65px; text-align:center;">ID: ${displayId}</span>
-      <input type="text" id="p-input-${i}" data-player-id="${pId}" placeholder="プレイヤー名を入力" value="${pName || "プレイヤー" + (i + 1)}" class="form-input" style="flex:1;">
-      ${pId ? `<button onclick="deleteRoomPlayer(\${pId})" class="btn-riichi" style="background:#f43f5e; border:none; margin:0; padding:10px 14px; border-radius:12px; color:white; font-weight:bold;">❌</button>` : ""}
+      <input type="text" id="p-input-${i}" data-player-id="${pId}" placeholder="プレイヤー名を入力" value="${pName}" class="form-input" style="flex:1;">
     `;
     container.appendChild(div);
-  }
-}
-// 過去の登録メンバーをドロップダウンで選択した時、入力欄に名前を自動代入する処理
-function onMasterSelect(index, playerId) {
-  const input = document.getElementById(`p-input-${index}`);
-  if (!input) return;
-  if (playerId && appState.playerMaster[playerId]) {
-    input.value = appState.playerMaster[playerId].name;
-    // 選択されたIDを一時的にカスタム属性に退避
-    input.setAttribute("data-selected-id", playerId);
-  } else {
-    input.removeAttribute("data-selected-id");
-  }
-}// ルームが選ばれたら自動的にメンバーをリロードする
-function onRoomChange(rName) {
-  if (!rName) return;
-  appState.currentRoomName = rName;
-  updatePlayerInputs();
-  saveToLocalStorage();
-}
-
-// 新規ルームを作成する
-function createNewRoom(rName) {
-  const name = rName.trim();
-  if (!name) return;
-  if (!appState.rooms[name]) {
-    appState.rooms[name] = { roomName: name, gameCount: 0, nextPlayerId: 1, players: {} };
-  }
-  appState.currentRoomName = name;
-  updateRoomSelectOptions();
-  updatePlayerInputs();
-  document.getElementById("new-room-input").value = "";
-  saveToLocalStorage();
-}
-
-// 🚨 ルームに紐づくメンバーを成績ごと完全に削除する機能
-function deleteRoomPlayer(pId) {
-  const room = appState.rooms[appState.currentRoomName];
-  if (!room || !room.players[pId]) return;
-  
-  if (confirm(`「${room.players[pId].name}」のデータをこのルームから完全に削除しますか？（これまでの成績も消去されます）`)) {
-    delete room.players[pId];
-    updatePlayerInputs();
-    saveToLocalStorage();
   }
 }
 
@@ -230,6 +185,30 @@ function updateRoomSelectOptions() {
     }
     roomSelect.appendChild(opt);
   });
+}
+
+// 🚨 現在選択しているルームを成績・メンバーごと丸ごと削除する機能
+function deleteCurrentRoom() {
+  const rName = appState.currentRoomName;
+  if (rName === "デフォルトルーム") {
+    alert("「デフォルトルーム」は削除できません。自分で作成したルームを削除してください。");
+    return;
+  }
+
+  if (confirm(`本当にルーム「${rName}」を削除しますか？\nこのグループに保存されているメンバーの名前、これまでの全成績が完全に消去されます。`)) {
+    // データを完全に消去
+    delete appState.rooms[rName];
+    
+    // 削除後は「デフォルトルーム」に自動で引き戻す
+    appState.currentRoomName = "デフォルトルーム";
+    
+    // セレクトボックスの選択肢とプレイヤー入力欄をリフレッシュ
+    updateRoomSelectOptions();
+    updatePlayerInputs();
+    saveToLocalStorage();
+    
+    alert(`ルーム「${rName}」を削除しました。`);
+  }
 }
 
 function onRoomSelectChange() {

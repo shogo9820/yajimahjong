@@ -31,6 +31,13 @@
       <select id="room-select" class="form-select" onchange="onRoomChange(this.value)">
         <!-- ここにルーム一覧が自動挿入されます -->
       </select>
+      <!-- ルームセレクトボックス（room-select）のすぐ下に配置してください -->
+<div style="margin-top: 8px;">
+  <button onclick="deleteCurrentRoom()" class="btn-riichi" style="background:#f43f5e; border:none; margin:0; padding:8px 12px; border-radius:8px; color:white; font-weight:bold; font-size:12px; width:100%; box-shadow: 0 2px 4px rgba(244,63,94,0.2);">
+    🗑️ このルームを成績ごと丸ごと削除する
+  </button>
+</div>
+
     </div>
     <div class="pt-2">
       <span class="input-label-sm">または、新規ルーム名を入力して作成</span>

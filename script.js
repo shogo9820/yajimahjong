@@ -1,3 +1,7 @@
+// ==========================================
+// 🚨 ファイルの最上部（1行目）からここを貼り付けてください
+// ==========================================
+
 // PWA用のService Workerをブラウザに登録する処理
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
@@ -10,14 +14,15 @@ if ("serviceWorker" in navigator) {
 
 const windLabels = ["東", "南", "西", "北"];
 
-// アプリ内部のすべての状態データを一元管理（ID番号・名簿・ルーム管理対応版）
+// アプリ内部のすべての状態データを一元管理（ルーム主導・エラー防止完全版）
 let appState = {
   rooms: {
     "デフォルトルーム": {
       roomName: "デフォルトルーム",
       gameCount: 0,
-      nextPlayerId: 1, // 🚨 ルームごとに個別のIDカウンターを持つ
-      players: {}      // 🚨 { 1: { id: 1, name: "佐藤", totalGames: 3, points: 45.2 } }
+      nextPlayerId: 1,
+      players: {},
+      playerGames: {}
     }
   },
   currentRoomName: "デフォルトルーム",
@@ -31,7 +36,11 @@ let appState = {
   honbaCount: 0,
   kyotakuCount: 0,
   riichiPlayers: [],
-  currentScreen: "screen-register"
+  currentScreen: "screen-register",
+  
+  // 過去データ互換用のダミー（エラー防止）
+  stats: {},
+  gameCount: 0
 };
 
 let matchCalcState = {

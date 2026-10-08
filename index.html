@@ -22,6 +22,23 @@
           <h1 class="title text-emerald">麻雀マネージャー</h1>
           <p class="subtitle">参加メンバー登録</p>
         </header>
+        <!-- screen-register（最初の画面）の最上部、タイトルや人数選択のあたりに追記・移動 -->
+<div class="card mb-3">
+  <label class="input-label">対局ルーム（グループ）の選択</label>
+  <div class="space-y-3">
+    <div>
+      <span class="input-label-sm">既存のルームを選ぶ（自動でメンバーをロード）</span>
+      <select id="room-select" class="form-select" onchange="onRoomChange(this.value)">
+        <!-- ここにルーム一覧が自動挿入されます -->
+      </select>
+    </div>
+    <div class="pt-2">
+      <span class="input-label-sm">または、新規ルーム名を入力して作成</span>
+      <input type="text" id="new-room-input" placeholder="新しいルーム名を入力" class="form-input" style="width: 100%; margin-top: 4px;" onchange="createNewRoom(this.value)">
+    </div>
+  </div>
+</div>
+
         <div class="card mb-4">
           <label class="input-label">本日の参加人数</label>
           <select
@@ -128,23 +145,6 @@
           </div>
           <!-- 初期状態では非表示（hidden-accordion）にする枠 -->
           <div id="accordion-content" class="table-rows hidden-accordion">
-            <!-- ルール設定画面 (screen-rules) 内の任意の場所（ゲームの長さの上など）に追記 -->
-<div class="card mb-3">
-  <label class="input-label">スコア保存先（ルーム設定）</label>
-  <div class="space-y-3">
-    <div>
-      <span class="input-label-sm">既存のルームから選ぶ</span>
-      <select id="room-select" class="form-select" onchange="onRoomSelectChange()">
-        <!-- JavaScriptで過去のルーム一覧が自動挿入されます -->
-      </select>
-    </div>
-    <div class="pt-2">
-      <span class="input-label-sm">または新規ルームを作成して保存</span>
-      <input type="text" id="new-room-input" placeholder="新しいルーム名を入力（例: 金曜夜メンツ）" class="form-input" style="width: 100%; margin-top: 4px;">
-    </div>
-  </div>
-</div>
-
             <div class="table-row-flex">
               <span>ゲームの長さ</span>
               <select id="rule-length" class="inline-select">

@@ -12,26 +12,26 @@ const windLabels = ["東", "南", "西", "北"];
 
 // アプリ内部のすべての状態データを一元管理（ID番号・名簿・ルーム管理対応版）
 let appState = {
-  nextPlayerId: 1001,      // 次に新規登録するプレイヤーに割り振る自動連番ID
-  playerMaster: {},        // 全プレイヤーのマスター名簿 { 1001: { id: 1001, name: "プレイヤー1" }, ... }
-  rooms: {},               // ルーム別の成績データ { "月曜メンツ": { gameCount: 3, stats: { 1001: 45.2 } }, ... }
-  currentRoomName: "デフォルトルーム", // 現在選択されているスコア保存先のルーム名
-
-  allPlayers: [],          // 今回の参加メンバーの【プレイヤーID】のリスト
-  activePlayers: [],       // 実際に卓についているメンバーの【プレイヤーID】（東南西北）
-  subPlayer: null,         // 4人3打ち用の控えメンバーの【プレイヤーID】
-  currentPoints: {},       // 今回の半荘の現在の持ち点（キーはプレイヤーID）
-  tableSize: 4,            // 3人麻雀なら3、4人麻雀なら4
-  currentWind: 0,          // 0=東場, 1=南場
-  currentKyoku: 1,         // 1局〜4局
-  honbaCount: 0,           // 本場（積棒）の数
-  kyotakuCount: 0,         // 供託（リーチ棒）の数
-  riichiPlayers: [],       // 今局すでに立直ボタンを押したメンバーの【プレイヤーID】を記録
-  currentScreen: "screen-register", // 現在表示中の画面ID
-  
-  // 互換性維持用
-  stats: {},
-  gameCount: 0
+  rooms: {
+    "デフォルトルーム": {
+      roomName: "デフォルトルーム",
+      gameCount: 0,
+      nextPlayerId: 1, // 🚨 ルームごとに個別のIDカウンターを持つ
+      players: {}      // 🚨 { 1: { id: 1, name: "佐藤", totalGames: 3, points: 45.2 } }
+    }
+  },
+  currentRoomName: "デフォルトルーム",
+  allPlayers: [],    // 今回の対局メンバー（現在のルーム内のプレイヤーID配列）
+  activePlayers: [], // 東南西北
+  subPlayer: null,
+  currentPoints: {},
+  tableSize: 4,
+  currentWind: 0,
+  currentKyoku: 1,
+  honbaCount: 0,
+  kyotakuCount: 0,
+  riichiPlayers: [],
+  currentScreen: "screen-register"
 };
 
 let matchCalcState = {
@@ -112,39 +112,32 @@ window.onload = function () {
 
 // メンバー登録画面の名簿選択＆名前入力フォームの動的生成
 function updatePlayerInputs() {
-  const selectEl = document.getElementById("member-count-select");
-  if (!selectEl) return;
-  const count = parseInt(selectEl.value);
   const container = document.getElementById("player-inputs-container");
   if (!container) return;
+
+  const room = appState.rooms[appState.currentRoomName] || { players: {} };
+  const pIds = Object.keys(room.players);
   
-  // 現在すでに入力されているテキストを取得
-  const currentValues = Array.from(container.querySelectorAll(".form-input")).map(i => i.value);
+  // 選択している人数（卓サイズ等）に関わらず、ルームに紐づく全員を自動ロードして一覧化
+  const count = Math.max(pIds.length, parseInt(document.getElementById("member-count-select")?.value || 4));
+  document.getElementById("member-count-select").value = count;
 
   container.innerHTML = "";
   for (let i = 0; i < count; i++) {
+    const pId = pIds[i] || "";
+    const pName = pId ? room.players[pId].name : "";
+
     const div = document.createElement("div");
     div.className = "input-row";
-    div.style.flexDirection = "column";
-    div.style.alignItems = "stretch";
-    div.style.gap = "4px";
-    div.style.marginBottom = "10px";
-
-    // 過去の登録メンバーを選択できるドロップダウンの選択肢を作成
-    let masterOptions = `<option value="">-- 登録済みの名簿から選ぶ --</option>`;
-    Object.keys(appState.playerMaster).forEach(id => {
-      const p = appState.playerMaster[id];
-      masterOptions += `<option value="${p.id}">${p.name} (ID: ${p.id})</option>`;
-    });
+    div.style.display = "flex";
+    div.style.alignItems = "center";
+    div.style.gap = "8px";
+    div.style.marginBottom = "8px";
 
     div.innerHTML = `
-      <div style="display:flex; gap:8px; align-items:center;">
-        <span class="no-badge">No. ${i + 1}</span>
-        <select class="form-select master-selector" style="flex:1; padding:8px;" onchange="onMasterSelect(${i}, this.value)">
-          ${masterOptions}
-        </select>
-      </div>
-      <input type="text" id="p-input-${i}" placeholder="新規プレイヤー名を入力" value="${currentValues[i] || ""}" class="form-input" style="width:100%; margin-top:2px;">
+      <span class="no-badge" style="min-width:50px;">ID: ${pId || (i + 1)}</span>
+      <input type="text" id="p-input-${i}" data-player-id="${pId}" placeholder="プレイヤー名" value="${pName}" class="form-input" style="flex:1;">
+      ${pId ? `<button onclick="deleteRoomPlayer(\${pId})" class="btn-riichi" style="background:#f43f5e; border:none; margin:0; padding:10px 14px; border-radius:12px; color:white; font-weight:bold;">❌</button>` : ""}
     `;
     container.appendChild(div);
   }
@@ -160,6 +153,78 @@ function onMasterSelect(index, playerId) {
   } else {
     input.removeAttribute("data-selected-id");
   }
+}// ルームが選ばれたら自動的にメンバーをリロードする
+function onRoomChange(rName) {
+  if (!rName) return;
+  appState.currentRoomName = rName;
+  updatePlayerInputs();
+  saveToLocalStorage();
+}
+
+// 新規ルームを作成する
+function createNewRoom(rName) {
+  const name = rName.trim();
+  if (!name) return;
+  if (!appState.rooms[name]) {
+    appState.rooms[name] = { roomName: name, gameCount: 0, nextPlayerId: 1, players: {} };
+  }
+  appState.currentRoomName = name;
+  updateRoomSelectOptions();
+  updatePlayerInputs();
+  document.getElementById("new-room-input").value = "";
+  saveToLocalStorage();
+}
+
+// 🚨 ルームに紐づくメンバーを成績ごと完全に削除する機能
+function deleteRoomPlayer(pId) {
+  const room = appState.rooms[appState.currentRoomName];
+  if (!room || !room.players[pId]) return;
+  
+  if (confirm(`「${room.players[pId].name}」のデータをこのルームから完全に削除しますか？（これまでの成績も消去されます）`)) {
+    delete room.players[pId];
+    updatePlayerInputs();
+    saveToLocalStorage();
+  }
+}
+
+// プレイヤー名の一括確定処理
+function submitRegistration() {
+  const count = parseInt(document.getElementById("member-count-select").value);
+  const room = appState.rooms[appState.currentRoomName];
+  appState.allPlayers = [];
+
+  for (let i = 0; i < count; i++) {
+    const input = document.getElementById(`p-input-${i}`);
+    const val = input ? input.value.trim() : "";
+    if (!val) continue;
+
+    let pId = input.getAttribute("data-player-id");
+    if (!pId) {
+      pId = room.nextPlayerId;
+      room.players[pId] = { id: pId, name: val, totalGames: 0, points: 0 };
+      room.nextPlayerId++;
+    } else {
+      room.players[pId].name = val; // 名前が書き換えられたら上書き
+    }
+    appState.allPlayers.push(parseInt(pId));
+  }
+
+  if (appState.allPlayers.length < 3) {
+    alert("対局には最低3人以上のメンバーが必要です");
+    return;
+  }
+
+  setupDragAndDrop();
+  switchScreen("screen-register", "screen-rules");
+}
+
+// IDからプレイヤー名を引く関数のルーム完全紐づけ化
+function getPlayerName(id) {
+  const room = appState.rooms[appState.currentRoomName];
+  if (room && room.players[id]) {
+    return room.players[id].name;
+  }
+  return "未知のメンツ";
 }
 
 // ルール画面のルーム選択フィールドの選択肢を更新
@@ -949,7 +1014,17 @@ function endMatch() {
   const oka = is3人 ? 15 : 20;
 
   let room = appState.rooms[appState.currentRoomName];
+  // 変更後
   room.gameCount++;
+  currentScores.forEach((item, rank) => {
+    let finalPt = Math.round((item.score - baseReturn) / 1000) + uma[rank];
+    if (rank === 0) finalPt += oka;
+    
+    // ルームの中のプレイヤーデータに直接加算
+    const pData = room.players[item.id];
+    pData.points += finalPt;
+    pData.totalGames++;
+  });
 
   let calculatedRows = [];
   currentScores.forEach((item, rank) => {
@@ -994,29 +1069,22 @@ function openStats() {
   if (!tbody) return;
   tbody.innerHTML = "";
   
-  const room = appState.rooms[appState.currentRoomName] || { gameCount: 0, stats: {} };
-  
-  let sortedStats = Object.keys(room.stats)
+  // 変更後
+  const room = appState.rooms[appState.currentRoomName] || { gameCount: 0, players: {} };
+  let sortedStats = Object.keys(room.players)
     .map((pId) => {
-      return { 
-        id: pId, 
-        name: getPlayerName(pId), 
-        pt: room.stats[pId] 
-      };
+      const p = room.players[pId];
+      return { id: pId, name: p.name, pt: p.points, games: p.totalGames };
     })
     .sort((a, b) => b.pt - a.pt);
-    
+
   sortedStats.forEach((item) => {
     const tr = document.createElement("tr");
     const ptClass = item.pt >= 0 ? "pt-plus" : "pt-minus";
     const ptSign = item.pt > 0 ? "+" : "";
-    
-    // 🚨 そのルームでの個人の対局数を取得（データがなければ0回）
-    const pGames = room.playerGames && room.playerGames[item.id] !== undefined ? room.playerGames[item.id] : 0;
-
     tr.innerHTML = `
-      <td><strong>${item.name}</strong> <span style="font-size:10px; color:#64748b;">(#${item.id})</span></td>
-      <td class="text-center font-mono">${pGames}</td>
+      <td><strong>${item.name}</strong> <span style="font-size:10px; color:#64748b;">(ID:${item.id})</span></td>
+      <td class="text-center font-mono">${item.games}</td>
       <td class="text-right font-mono ${ptClass}">${ptSign}${item.pt.toFixed(1)}</td>
     `;
     tbody.appendChild(tr);

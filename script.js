@@ -391,7 +391,15 @@ function startMatch() {
   
   // 選択されたルームが未作成なら初期化
   if (!appState.rooms[appState.currentRoomName]) {
-    appState.rooms[appState.currentRoomName] = { roomName: appState.currentRoomName, gameCount: 0, stats: {} };
+    appState.rooms[appState.currentRoomName] = { 
+      roomName: appState.currentRoomName, 
+      gameCount: 0, 
+      stats: {},
+      playerGames: {} // 🚨【新設】各個人のこのルームでの打数を記録する場所
+    };
+  }
+  if (!appState.rooms[appState.currentRoomName].playerGames) {
+    appState.rooms[appState.currentRoomName].playerGames = {};
   }
 
   appState.activePlayers = [];
@@ -960,6 +968,10 @@ function endMatch() {
     if (room.stats[item.id] === undefined) room.stats[item.id] = 0;
     room.stats[item.id] += finalPt;
     
+    // 🚨 実際にこの半荘を打ったプレイヤーだけルーム内の対局数をプラスする
+    if (room.playerGames[item.id] === undefined) room.playerGames[item.id] = 0;
+    room.playerGames[item.id]++;
+    
     appState.playerMaster[item.id].totalGames++;
   });
 
@@ -999,9 +1011,12 @@ function openStats() {
     const ptClass = item.pt >= 0 ? "pt-plus" : "pt-minus";
     const ptSign = item.pt > 0 ? "+" : "";
     
+    // 🚨 そのルームでの個人の対局数を取得（データがなければ0回）
+    const pGames = room.playerGames && room.playerGames[item.id] !== undefined ? room.playerGames[item.id] : 0;
+
     tr.innerHTML = `
       <td><strong>${item.name}</strong> <span style="font-size:10px; color:#64748b;">(#${item.id})</span></td>
-      <td class="text-center font-mono">${room.gameCount}</td>
+      <td class="text-center font-mono">${pGames}</td>
       <td class="text-right font-mono ${ptClass}">${ptSign}${item.pt.toFixed(1)}</td>
     `;
     tbody.appendChild(tr);

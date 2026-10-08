@@ -736,6 +736,55 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
 }
 
 /* ==========================================================================
+   📱 縦持ち：全画面の下部固定ボタン「下余白完全固定＆見切れ根絶」スタイル
+   ========================================================================== */
+@media screen and (orientation: portrait) {
+  /* 1. bodyの下部パディングをゼロにして、ボタン自体の余白だけで管理 */
+  body {
+    padding-bottom: 0 !important;
+  }
+
+  /* 2. 各画面の最下部ボタンラッパー（画面1、画面2、画面3、画面4すべて共通） */
+  #screen-register > div:last-child,
+  #screen-rules > div:last-child,
+  #screen-result > div:last-child,
+  .portrait-fixed-footer {
+    flex-shrink: 0 !important; /* 絶対に縮まない・押し出されない */
+    margin: 0 !important;
+    padding-top: 6px !important;
+    padding-bottom: 10px !important; /* 🎯 下の余白を「10px」で完全固定！ */
+    box-sizing: border-box !important;
+    background-color: #0f172a !important; /* 背景色で下端を綺麗にカバー */
+  }
+
+  /* 3. ボタン自体のサイズとマージン適正化 */
+  #screen-register > div:last-child .btn,
+  #screen-rules > div:last-child .btn,
+  #screen-result > div:last-child .btn,
+  .portrait-fixed-footer .btn {
+    margin: 0 !important;
+    padding: 13px !important; /* 指で押しやすいしっかりした高さ */
+    font-size: 16px !important;
+    font-weight: 800 !important;
+    border-radius: 12px !important;
+    display: block !important;
+    width: 100% !important;
+  }
+
+  /* 4. 中央のスクロール領域がボタンに被らないよう余白を確保 */
+  #screen-register > div:first-child,
+  #screen-rules > div:nth-child(2),
+  #screen-result > div:first-child,
+  .portrait-scroll-body {
+    flex: 1 1 0% !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    margin-bottom: 4px !important;
+  }
+}
+
+
+/* ==========================================================================
    💻 横持ち（Landscape）mahjong-table限界最大化・超特大視認性スタイル
    ========================================================================== */
 @media screen and (orientation: landscape) {

@@ -641,137 +641,29 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
 }
 
 /* ==========================================================================
-   📱 縦持ち（Portrait）完全独立・下部見切れ解消スタイル
-   ※ 横画面(@media orientation: landscape)には一切干渉しません
+   📱 縦持ち（Portrait）：確実復元・最下部ボタン固定スタイル
    ========================================================================== */
 @media screen and (orientation: portrait) {
   html, body {
+    width: 100vw;
+    height: 100vh;
+    margin: 0 auto;
+    padding: 8px 12px 0 12px !important; /* 画面下パディングはゼロ */
+    max-width: 440px;
+    overflow: hidden !important;
+    box-sizing: border-box;
+  }
+
+  .screen {
     width: 100%;
     height: 100%;
-    height: 100dvh; /* ツールバーやホームバーの伸縮に追従 */
-    margin: 0 auto !important;
-    padding: 10px 12px env(safe-area-inset-bottom, 8px) 12px !important;
-    max-width: 440px !important;
-    overflow: hidden !important; /* 画面全体の余計なスクロールをカット */
-    box-sizing: border-box !important;
-    position: static !important; /* 🚨 fixedを解除して元の自然なフローに戻す */
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    overflow: hidden;
   }
 
-  /* 画面全体のコンテナ：親の縦幅100%を厳密に維持 */
-  .screen {
-    width: 100% !important;
-    height: 100% !important;
-    max-height: 100% !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: space-between !important; /* 上ブロックと下ボタンを画面内に収める */
-    overflow: hidden !important;
-    box-sizing: border-box !important;
-    position: static !important;
-  }
-
-  /* ------------------------------------------------------------------------
-     画面1（screen-register）＆ 画面2（screen-rules）の内部スクロール保護
-     ------------------------------------------------------------------------ */
-  /* 上部の入力・設定エリア：下部ボタンを押し出さないよう内部スクロール */
-  #screen-register > div:first-child,
-  #screen-rules > div:nth-child(2) {
-    flex: 1 1 0% !important;
-    min-height: 0 !important;
-    overflow-y: auto !important;
-    padding-right: 2px;
-  }
-
-  /* 画面1のプレイヤー一覧カード */
-  #screen-register .scroll-box {
-    max-height: none !important;
-    overflow-y: visible !important;
-  }
-
-  /* ------------------------------------------------------------------------
-     画面3（screen-match）対局メイン画面
-     ------------------------------------------------------------------------ */
-  .view-landscape {
-    display: none !important;
-  }
-
-  .view-portrait {
-    display: flex !important;
-    flex-direction: column !important;
-    width: 100% !important;
-    height: 100% !important;
-    max-height: 100% !important;
-    justify-content: space-between !important;
-    overflow: hidden !important;
-    box-sizing: border-box !important;
-    gap: 6px !important;
-  }
-
-  /* 上部エリア（ヘッダー・持ち点・精算パネル） */
-  .portrait-scroll-body {
-    flex: 1 1 0% !important;
-    min-height: 0 !important;
-    overflow-y: auto !important; /* 画面が小さい端末では安全にスクロール可能に */
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 6px !important;
-    padding-right: 2px;
-  }
-
-  /* 最下部固定実行ボタン：絶対に画面外へ出ないよう固定 */
-  .portrait-fixed-footer {
-    flex-shrink: 0 !important;
-    padding-top: 4px !important;
-    padding-bottom: 2px !important;
-    box-sizing: border-box !important;
-    background-color: transparent !important;
-  }
-
-  .portrait-fixed-footer .btn-execute {
-    padding: 12px !important;
-    font-size: 16px !important;
-    font-weight: 900 !important;
-    border-radius: 12px !important;
-  }
-}
-
-/* ==========================================================================
-   📱 縦持ち：全画面の下部固定ボタン「下余白完全固定＆見切れ根絶」スタイル
-   ========================================================================== */
-@media screen and (orientation: portrait) {
-  /* 1. bodyの下部パディングをゼロにして、ボタン自体の余白だけで管理 */
-  body {
-    padding-bottom: 0 !important;
-  }
-
-  /* 2. 各画面の最下部ボタンラッパー（画面1、画面2、画面3、画面4すべて共通） */
-  #screen-register > div:last-child,
-  #screen-rules > div:last-child,
-  #screen-result > div:last-child,
-  .portrait-fixed-footer {
-    flex-shrink: 0 !important; /* 絶対に縮まない・押し出されない */
-    margin: 0 !important;
-    padding-top: 6px !important;
-    padding-bottom: 10px !important; /* 🎯 下の余白を「10px」で完全固定！ */
-    box-sizing: border-box !important;
-    background-color: #0f172a !important; /* 背景色で下端を綺麗にカバー */
-  }
-
-  /* 3. ボタン自体のサイズとマージン適正化 */
-  #screen-register > div:last-child .btn,
-  #screen-rules > div:last-child .btn,
-  #screen-result > div:last-child .btn,
-  .portrait-fixed-footer .btn {
-    margin: 0 !important;
-    padding: 13px !important; /* 指で押しやすいしっかりした高さ */
-    font-size: 16px !important;
-    font-weight: 800 !important;
-    border-radius: 12px !important;
-    display: block !important;
-    width: 100% !important;
-  }
-
-  /* 4. 中央のスクロール領域がボタンに被らないよう余白を確保 */
+  /* 画面1・2・3・4の中央エリア：ここだけを縮ませてスクロールさせる */
   #screen-register > div:first-child,
   #screen-rules > div:nth-child(2),
   #screen-result > div:first-child,
@@ -779,7 +671,28 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     flex: 1 1 0% !important;
     min-height: 0 !important;
     overflow-y: auto !important;
-    margin-bottom: 4px !important;
+  }
+
+  /* 🎯 ボタンを囲む一番下のブロック：下端から常に10px浮かせた位置に固定 */
+  .fixed-bottom-btn-area,
+  .portrait-fixed-footer {
+    margin-top: auto !important;
+    flex-shrink: 0 !important;
+    padding-top: 6px !important;
+    padding-bottom: 12px !important; /* ボタン下の余白を12pxで物理固定 */
+    box-sizing: border-box !important;
+    width: 100% !important;
+  }
+
+  .fixed-bottom-btn-area .btn,
+  .portrait-fixed-footer .btn {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 13px !important;
+    font-size: 16px !important;
+    font-weight: 800 !important;
+    border-radius: 12px !important;
   }
 }
 

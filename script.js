@@ -12,31 +12,31 @@ const windLabels = ["東", "南", "西", "北"];
 
 // アプリ内部のすべての状態データを一元管理（ID番号・名簿・ルーム管理対応版）
 let appState = {
-  nextPlayerId: 1001, // 次に新規登録するプレイヤーに割り振る自動連番ID
-  playerMaster: {}, // 全プレイヤーのマスター名簿 { 1001: { id: 1001, name: "プレイヤー1" }, ... }
-  rooms: {}, // ルーム別の成績データ { "月曜メンツ": { gameCount: 3, stats: { 1001: 45.2 } }, ... }
+  nextPlayerId: 1001,      // 次に新規登録するプレイヤーに割り振る自動連番ID
+  playerMaster: {},        // 全プレイヤーのマスター名簿 { 1001: { id: 1001, name: "プレイヤー1" }, ... }
+  rooms: {},               // ルーム別の成績データ { "月曜メンツ": { gameCount: 3, stats: { 1001: 45.2 } }, ... }
   currentRoomName: "デフォルトルーム", // 現在選択されているスコア保存先のルーム名
 
-  allPlayers: [], // 今回の参加メンバーの【プレイヤーID】のリスト
-  activePlayers: [], // 実際に卓についているメンバーの【プレイヤーID】（東南西北）
-  subPlayer: null, // 4人3打ち用の控えメンバーの【プレイヤーID】
-  currentPoints: {}, // 今回の半荘の現在の持ち点（キーはプレイヤーID）
-  tableSize: 4, // 3人麻雀なら3、4人麻雀なら4
-  currentWind: 0, // 0=東場, 1=南場
-  currentKyoku: 1, // 1局〜4局
-  honbaCount: 0, // 本場（積棒）の数
-  kyotakuCount: 0, // 供託（リーチ棒）の数
-  riichiPlayers: [], // 今局すでに立直ボタンを押したメンバーの【プレイヤーID】を記録
+  allPlayers: [],          // 今回の参加メンバーの【プレイヤーID】のリスト
+  activePlayers: [],       // 実際に卓についているメンバーの【プレイヤーID】（東南西北）
+  subPlayer: null,         // 4人3打ち用の控えメンバーの【プレイヤーID】
+  currentPoints: {},       // 今回の半荘の現在の持ち点（キーはプレイヤーID）
+  tableSize: 4,            // 3人麻雀なら3、4人麻雀なら4
+  currentWind: 0,          // 0=東場, 1=南場
+  currentKyoku: 1,         // 1局〜4局
+  honbaCount: 0,           // 本場（積棒）の数
+  kyotakuCount: 0,         // 供託（リーチ棒）の数
+  riichiPlayers: [],       // 今局すでに立直ボタンを押したメンバーの【プレイヤーID】を記録
   currentScreen: "screen-register", // 現在表示中の画面ID
-
+  
   // 互換性維持用
   stats: {},
-  gameCount: 0,
+  gameCount: 0
 };
 
 let matchCalcState = {
   winners: [], // IDで管理
-  loser: null, // IDで管理
+  loser: null,  // IDで管理
   type: "ron",
   scale: null,
 };
@@ -48,9 +48,9 @@ let touchOffsetTop = 0;
 // 横持ち卓の4席ID（手前・右・奥・左）
 const LANDSCAPE_SEAT_IDS = [
   "ls-seat-bottom", // 手前 (Seat 0)
-  "ls-seat-right", // 右 (Seat 1)
-  "ls-seat-top", // 奥 (Seat 2)
-  "ls-seat-left", // 左 (Seat 3)
+  "ls-seat-right",  // 右 (Seat 1)
+  "ls-seat-top",    // 奥 (Seat 2)
+  "ls-seat-left"    // 左 (Seat 3)
 ];
 
 // データをローカルストレージに自動保存する関数
@@ -58,7 +58,7 @@ function saveToLocalStorage() {
   localStorage.setItem("mj_manager_state", JSON.stringify(appState));
 }
 
-// プレイヤーIDから名前を安全に取得するヘルパー関数（同姓同名でもIDで正しく識別）
+// プレイヤーIDから名前を安全に取得するヘルパー関数
 function getPlayerName(id) {
   if (appState.playerMaster[id]) {
     return appState.playerMaster[id].name;
@@ -77,8 +77,7 @@ window.onload = function () {
       if (!appState.playerMaster) appState.playerMaster = {};
       if (!appState.rooms) appState.rooms = {};
       if (!appState.nextPlayerId) appState.nextPlayerId = 1001;
-      if (!appState.currentRoomName)
-        appState.currentRoomName = "デフォルトルーム";
+      if (!appState.currentRoomName) appState.currentRoomName = "デフォルトルーム";
 
       // 1. メンバー一覧入力枠の復元
       const memberSelect = document.getElementById("member-count-select");
@@ -86,7 +85,7 @@ window.onload = function () {
         memberSelect.value = appState.allPlayers.length || 4;
       }
       updatePlayerInputs();
-
+      
       // 2. ルーム選択肢の更新
       updateRoomSelectOptions();
 
@@ -118,11 +117,9 @@ function updatePlayerInputs() {
   const count = parseInt(selectEl.value);
   const container = document.getElementById("player-inputs-container");
   if (!container) return;
-
+  
   // 現在すでに入力されているテキストを取得
-  const currentValues = Array.from(
-    container.querySelectorAll(".form-input"),
-  ).map((i) => i.value);
+  const currentValues = Array.from(container.querySelectorAll(".form-input")).map(i => i.value);
 
   container.innerHTML = "";
   for (let i = 0; i < count; i++) {
@@ -135,7 +132,7 @@ function updatePlayerInputs() {
 
     // 過去の登録メンバーを選択できるドロップダウンの選択肢を作成
     let masterOptions = `<option value="">-- 登録済みの名簿から選ぶ --</option>`;
-    Object.keys(appState.playerMaster).forEach((id) => {
+    Object.keys(appState.playerMaster).forEach(id => {
       const p = appState.playerMaster[id];
       masterOptions += `<option value="${p.id}">${p.name} (ID: ${p.id})</option>`;
     });
@@ -170,17 +167,13 @@ function updateRoomSelectOptions() {
   const roomSelect = document.getElementById("room-select");
   if (!roomSelect) return;
   roomSelect.innerHTML = "";
-
+  
   // デフォルトルームがなければ作成
   if (!appState.rooms["デフォルトルーム"]) {
-    appState.rooms["デフォルトルーム"] = {
-      roomName: "デフォルトルーム",
-      gameCount: 0,
-      stats: {},
-    };
+    appState.rooms["デフォルトルーム"] = { roomName: "デフォルトルーム", gameCount: 0, stats: {} };
   }
 
-  Object.keys(appState.rooms).forEach((rName) => {
+  Object.keys(appState.rooms).forEach(rName => {
     const opt = document.createElement("option");
     opt.value = rName;
     opt.innerText = rName;
@@ -204,9 +197,9 @@ function submitRegistration() {
   const selectEl = document.getElementById("member-count-select");
   if (!selectEl) return;
   const count = parseInt(selectEl.value);
-
+  
   appState.allPlayers = [];
-
+  
   for (let i = 0; i < count; i++) {
     const input = document.getElementById(`p-input-${i}`);
     if (!input) return;
@@ -217,13 +210,9 @@ function submitRegistration() {
     }
 
     let pId = input.getAttribute("data-selected-id");
-
+    
     // 名簿から選んでいない、または名前が書き換えられている場合は新規プレイヤーとしてID発行
-    if (
-      !pId ||
-      !appState.playerMaster[pId] ||
-      appState.playerMaster[pId].name !== val
-    ) {
+    if (!pId || !appState.playerMaster[pId] || appState.playerMaster[pId].name !== val) {
       pId = appState.nextPlayerId;
       appState.playerMaster[pId] = { id: pId, name: val, totalGames: 0 };
       appState.nextPlayerId++;
@@ -231,7 +220,7 @@ function submitRegistration() {
 
     appState.allPlayers.push(parseInt(pId));
   }
-
+  
   updateRoomSelectOptions();
   setupDragAndDrop();
   switchScreen("screen-register", "screen-rules");
@@ -293,10 +282,7 @@ function setupDragAndDrop() {
     seat.addEventListener("dragleave", handleDragLeave);
     seat.addEventListener("drop", handleDrop);
 
-    const label =
-      modeVal === "4-3打ち" && i === 3
-        ? "控（抜け番）"
-        : `${windLabels[i]}家 席`;
+    const label = (modeVal === "4-3打ち" && i === 3) ? "控（抜け番）" : `${windLabels[i]}家 席`;
     seat.innerHTML = `<span class="seat-label active-wind">${label}</span>`;
     seats.appendChild(seat);
   }
@@ -308,9 +294,7 @@ function handleDragStart(e) {
 
 function handleDragEnd(e) {
   this.style.opacity = "1";
-  document
-    .querySelectorAll(".seat-box, .role-box")
-    .forEach((s) => s.classList.remove("drag-over"));
+  document.querySelectorAll(".seat-box, .role-box").forEach((s) => s.classList.remove("drag-over"));
 }
 
 function handleDragOver(e) {
@@ -354,14 +338,10 @@ function handleTouchMove(e) {
   moveAt(touch.clientX, touch.clientY);
 
   const elementTarget = document.elementFromPoint(touch.clientX, touch.clientY);
-  document
-    .querySelectorAll(".seat-box, .role-box, .winner-target, .loser-target")
-    .forEach((s) => s.classList.remove("drag-over"));
+  document.querySelectorAll(".seat-box, .role-box, .winner-target, .loser-target").forEach((s) => s.classList.remove("drag-over"));
 
   if (elementTarget) {
-    const targetBox = elementTarget.closest(
-      ".seat-box, .winner-target, .loser-target",
-    );
+    const targetBox = elementTarget.closest(".seat-box, .winner-target, .loser-target");
     if (targetBox) targetBox.classList.add("drag-over");
   }
 }
@@ -381,10 +361,7 @@ function handleTouchEnd(e) {
   draggedElement.style.width = "";
 
   const changedTouch = e.changedTouches[0];
-  const elementTarget = document.elementFromPoint(
-    changedTouch.clientX,
-    changedTouch.clientY,
-  );
+  const elementTarget = document.elementFromPoint(changedTouch.clientX, changedTouch.clientY);
   const pool = document.getElementById("pool-container");
 
   if (elementTarget && pool) {
@@ -399,9 +376,7 @@ function handleTouchEnd(e) {
   } else if (pool) {
     pool.appendChild(draggedElement);
   }
-  document
-    .querySelectorAll(".seat-box")
-    .forEach((s) => s.classList.remove("drag-over"));
+  document.querySelectorAll(".seat-box").forEach((s) => s.classList.remove("drag-over"));
   draggedElement = null;
 }
 
@@ -413,14 +388,10 @@ function startMatch() {
     appState.currentRoomName = newRoomInput.value.trim();
     newRoomInput.value = ""; // 入力欄をクリア
   }
-
+  
   // 選択されたルームが未作成なら初期化
   if (!appState.rooms[appState.currentRoomName]) {
-    appState.rooms[appState.currentRoomName] = {
-      roomName: appState.currentRoomName,
-      gameCount: 0,
-      stats: {},
-    };
+    appState.rooms[appState.currentRoomName] = { roomName: appState.currentRoomName, gameCount: 0, stats: {} };
   }
 
   appState.activePlayers = [];
@@ -437,9 +408,7 @@ function startMatch() {
         alert(`${windLabels[i]}家の席にプレイヤーを配置してください。`);
         return;
       }
-      appState.activePlayers.push(
-        parseInt(chip.getAttribute("data-player-id")),
-      );
+      appState.activePlayers.push(parseInt(chip.getAttribute("data-player-id")));
     }
     const seatBox3 = document.getElementById("seat-3");
     const chip3 = seatBox3 ? seatBox3.querySelector(".player-chip") : null;
@@ -458,9 +427,7 @@ function startMatch() {
         alert(`${windLabels[i]}家の席にプレイヤーを配置してください。`);
         return;
       }
-      appState.activePlayers.push(
-        parseInt(chip.getAttribute("data-player-id")),
-      );
+      appState.activePlayers.push(parseInt(chip.getAttribute("data-player-id")));
     }
   }
 
@@ -469,10 +436,8 @@ function startMatch() {
   appState.honbaCount = 0;
   appState.kyotakuCount = 0;
   appState.riichiPlayers = [];
-
-  appState.activePlayers.forEach(
-    (pId) => (appState.currentPoints[pId] = 25000),
-  );
+  
+  appState.activePlayers.forEach((pId) => (appState.currentPoints[pId] = 25000));
   if (appState.subPlayer) appState.currentPoints[appState.subPlayer] = 25000;
 
   updateUIKyokuDisplay();
@@ -482,9 +447,8 @@ function startMatch() {
 }
 
 function updateUIKyokuDisplay() {
-  const roundStr =
-    (appState.currentWind === 0 ? "東" : "南") + appState.currentKyoku + "局";
-
+  const roundStr = (appState.currentWind === 0 ? "東" : "南") + appState.currentKyoku + "局";
+  
   const wLabel = document.getElementById("current-wind-label");
   const kNum = document.getElementById("current-kyoku-num");
   const honba = document.getElementById("current-honba");
@@ -497,8 +461,7 @@ function updateUIKyokuDisplay() {
   const hubRound = document.getElementById("ls-hub-round");
   const hubHonba = document.getElementById("ls-hub-honba");
   if (hubRound) hubRound.innerText = roundStr;
-  if (hubHonba)
-    hubHonba.innerText = `${appState.honbaCount}本場 / 供託${appState.kyotakuCount}本`;
+  if (hubHonba) hubHonba.innerText = `${appState.honbaCount}本場 / 供託${appState.kyotakuCount}本`;
 }
 
 // 対局画面の更新（IDをキーにして名前を引く形式）
@@ -514,8 +477,7 @@ function refreshMatchPlayerList() {
     for (let i = 0; i < appState.tableSize; i++) {
       const pId = appState.activePlayers[i];
       const wind = windLabels[i];
-      if (appState.currentPoints[pId] === undefined)
-        appState.currentPoints[pId] = 25000;
+      if (appState.currentPoints[pId] === undefined) appState.currentPoints[pId] = 25000;
 
       const div = document.createElement("div");
       div.className = "match-row";
@@ -553,10 +515,7 @@ function refreshMatchPlayerList() {
     let pId = appState.activePlayers[physicalIndex];
     if (modeVal === "4-3打ち" && physicalIndex === 3) {
       pId = appState.subPlayer;
-      const subScore =
-        appState.currentPoints[pId] !== undefined
-          ? appState.currentPoints[pId]
-          : 25000;
+      const subScore = appState.currentPoints[pId] !== undefined ? appState.currentPoints[pId] : 25000;
       seatEl.className = "table-seat seat-left seat-vacant";
       seatEl.innerHTML = `
         <div class="seat-header-row" style="justify-content:space-between;width:100%;">
@@ -572,15 +531,12 @@ function refreshMatchPlayerList() {
     const windIndex = (physicalIndex - oyaOffset + 4) % 4;
     const currentWind = windLabels[windIndex];
     const isOya = currentWind === "東";
-    const pScore =
-      appState.currentPoints[pId] !== undefined
-        ? appState.currentPoints[pId]
-        : 25000;
+    const pScore = appState.currentPoints[pId] !== undefined ? appState.currentPoints[pId] : 25000;
 
     seatEl.innerHTML = `
       <div class="seat-header-row">
         <div class="flex items-center gap-1">
-          <span class="wind-badge-sm ${isOya ? "bg-amber-500 text-black font-black" : ""}" style="width:24px;height:24px;font-size:12px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#1e293b;color:#34d399;font-weight:bold;border:1px solid #475569;">${currentWind}</span>
+          <span class="wind-badge-sm ${isOya ? 'bg-amber-500 text-black font-black' : ''}" style="width:24px;height:24px;font-size:12px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#1e293b;color:#34d399;font-weight:bold;border:1px solid #475569;">${currentWind}</span>
           <button onclick="declareRiichi('${pId}')" class="btn-riichi" style="padding:2px 6px;font-size:10px;margin-left:4px;">立直</button>
         </div>
         <div class="match-player-chip" id="ls-chip-${pId}" data-player-id="${pId}" draggable="true" style="font-size:12px;padding:2px 6px;">${getPlayerName(pId)}</div>
@@ -606,17 +562,13 @@ function syncManualScore(pId, value) {
   appState.currentPoints[pId] = parseInt(value) || 0;
   saveToLocalStorage();
   updateUIKyokuDisplay();
-
+  
   LANDSCAPE_SEAT_IDS.forEach((seatId, idx) => {
     const seatEl = document.getElementById(seatId);
     if (!seatEl) return;
-    if (
-      appState.activePlayers[idx] == pId ||
-      (idx === 3 && appState.subPlayer == pId)
-    ) {
+    if (appState.activePlayers[idx] == pId || (idx === 3 && appState.subPlayer == pId)) {
       const scoreTxt = seatEl.querySelector(".seat-score-text");
-      if (scoreTxt)
-        scoreTxt.innerText = (parseInt(value) || 0).toLocaleString();
+      if (scoreTxt) scoreTxt.innerText = (parseInt(value) || 0).toLocaleString();
     }
   });
 }
@@ -647,7 +599,7 @@ function handleRoleDrop(e) {
   if (!draggedElement) return;
   const slot = this.querySelector(".role-slot");
   if (!slot) return;
-
+  
   const pId = parseInt(draggedElement.getAttribute("data-player-id"));
   const name = getPlayerName(pId);
 
@@ -689,17 +641,14 @@ function handleMatchTouchEnd(e) {
   draggedElement.style.width = "";
 
   const changedTouch = e.changedTouches;
-  const targetEl = document.elementFromPoint(
-    changedTouch.clientX,
-    changedTouch.clientY,
-  );
+  const targetEl = document.elementFromPoint(changedTouch.clientX, changedTouch.clientY);
   const pId = parseInt(draggedElement.getAttribute("data-player-id"));
   const name = getPlayerName(pId);
 
   if (targetEl) {
     const winnerBox = targetEl.closest(".winner-target");
     const loserBox = targetEl.closest(".loser-target");
-
+    
     if (winnerBox) {
       const slot = winnerBox.querySelector(".role-slot");
       if (slot) {
@@ -724,205 +673,90 @@ function handleMatchTouchEnd(e) {
       }
     }
   }
-  document
-    .querySelectorAll(".role-box, .winner-target, .loser-target")
-    .forEach((b) => b.classList.remove("drag-over"));
+  document.querySelectorAll(".role-box, .winner-target, .loser-target").forEach((b) => b.classList.remove("drag-over"));
   draggedElement = null;
 }
-// 2. 💻 横持ち用卓
-const oyaOffset = (appState.currentKyoku - 1) % 4;
+function setAgariType(type) {
+  matchCalcState.type = type;
 
-LANDSCAPE_SEAT_IDS.forEach((seatId, physicalIndex) => {
-  const seatEl = document.getElementById(seatId);
-  if (!seatEl) return;
+  ["btn-agari-ron", "ls-btn-agari-ron"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle("active", type === "ron");
+  });
+  ["btn-agari-tsumo", "ls-btn-agari-tsumo"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle("active", type === "tsumo");
+  });
+  ["btn-agari-tenpai", "ls-btn-agari-tenpai"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle("active-tenpai", type === "tenpai");
+  });
 
-  if (isSanma && modeVal !== "4-3打ち" && physicalIndex === 3) {
-    seatEl.className = "table-seat seat-left seat-vacant";
-    seatEl.innerHTML = `
-        <div class="seat-header-row justify-center py-2"><span class="vacant-badge" style="font-size:11px;color:#94a3b8;">不使用</span></div>
-        <div class="seat-score-row"><span class="seat-score-text" style="color:#475569;font-size:18px !important;">---</span></div>
-      `;
-    return;
-  }
+  clearRoleSlotsOnly();
 
-  let pId = appState.activePlayers[physicalIndex];
-  if (modeVal === "4-3打ち" && physicalIndex === 3) {
-    pId = appState.subPlayer;
-    const subScore =
-      appState.currentPoints[pId] !== undefined
-        ? appState.currentPoints[pId]
-        : 25000;
-    seatEl.className = "table-seat seat-left seat-vacant";
-    seatEl.innerHTML = `
-        <div class="seat-header-row" style="justify-content:space-between;width:100%;">
-          <span class="vacant-badge" style="font-size:10px;background:#334155;padding:2px 4px;border-radius:4px;">控</span>
-          <span class="match-player-chip" style="font-size:12px;background:transparent;border:none;max-width:100px;text-overflow:ellipsis;overflow:hidden;">${getPlayerName(pId)}</span>
-        </div>
-        <div class="seat-score-row"><span class="seat-score-text" style="color:#64748b;font-size:20px !important;">${subScore.toLocaleString()}</span></div>
-      `;
-    return;
-  }
+  const isTenpai = (type === "tenpai");
+  const isTsumo = (type === "tsumo");
 
-  seatEl.classList.remove("seat-vacant");
-  const windIndex = (physicalIndex - oyaOffset + 4) % 4;
-  const currentWind = windLabels[windIndex];
-  const isOya = currentWind === "東";
-  const pScore =
-    appState.currentPoints[pId] !== undefined
-      ? appState.currentPoints[pId]
-      : 25000;
+  const winnerTexts = isTenpai ? "⭕ 聴牌者 (それ以外はノーテン)" : "🏆 和了者 (アガリ)";
+  const loserTexts  = isTenpai ? "❌ （聴牌時は不使用）" : "🎯 放銃者 (ロンの場合)";
 
-  seatEl.innerHTML = `
-      <div class="seat-header-row">
-        <div class="flex items-center gap-1">
-          <span class="wind-badge-sm ${isOya ? "bg-amber-500 text-black font-black" : ""}" style="width:24px;height:24px;font-size:12px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#1e293b;color:#34d399;font-weight:bold;border:1px solid #475569;">${currentWind}</span>
-          <button onclick="declareRiichi('${pId}')" class="btn-riichi" style="padding:2px 6px;font-size:10px;margin-left:4px;">立直</button>
-        </div>
-        <div class="match-player-chip" id="ls-chip-${pId}" data-player-id="${pId}" draggable="true" style="font-size:12px;padding:2px 6px;">${getPlayerName(pId)}</div>
-      </div>
-      <div class="seat-score-row"><span class="seat-score-text">${pScore.toLocaleString()}</span></div>
-    `;
+  ["role-winner-label", "ls-role-winner-label"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerText = winnerTexts;
+  });
+  ["role-loser-label", "ls-role-loser-label"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerText = loserTexts;
+  });
 
-  const chip = seatEl.querySelector(".match-player-chip");
-  bindChipEvents(chip);
-});
+  ["role-loser-box", "ls-role-loser-box"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.opacity = isTenpai ? "0.2" : (isTsumo ? "0.3" : "1");
+  });
 
-function bindChipEvents(chip) {
-  if (!chip) return;
-  chip.addEventListener("dragstart", handleDragStart);
-  chip.addEventListener("dragend", handleDragEnd);
-  chip.addEventListener("touchstart", handleTouchStart, { passive: false });
-  chip.addEventListener("touchmove", handleTouchMove, { passive: false });
-  chip.addEventListener("touchend", handleMatchTouchEnd);
-}
-
-function syncManualScore(pId, value) {
-  appState.currentPoints[pId] = parseInt(value) || 0;
-  saveToLocalStorage();
-  updateUIKyokuDisplay();
-
-  LANDSCAPE_SEAT_IDS.forEach((seatId, idx) => {
-    const seatEl = document.getElementById(seatId);
-    if (!seatEl) return;
-    if (
-      appState.activePlayers[idx] == pId ||
-      (idx === 3 && appState.subPlayer == pId)
-    ) {
-      const scoreTxt = seatEl.querySelector(".seat-score-text");
-      if (scoreTxt)
-        scoreTxt.innerText = (parseInt(value) || 0).toLocaleString();
+  ["panel-scale-box", "ls-panel-scale-box", "panel-detail-box", "ls-panel-detail-box"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      if (isTenpai) el.classList.add("hidden");
+      else el.classList.remove("hidden");
     }
   });
 }
 
-function declareRiichi(pId) {
-  pId = parseInt(pId);
-  if (appState.riichiPlayers.includes(pId)) {
-    alert(`${getPlayerName(pId)} はすでに立直しています。`);
-    return;
-  }
-  if (appState.currentPoints[pId] < 1000) {
-    alert("持ち点が1,000点未満のため立直できません");
-    return;
-  }
-
-  appState.currentPoints[pId] -= 1000;
-  appState.kyotakuCount += 1;
-  appState.riichiPlayers.push(pId);
-
-  updateUIKyokuDisplay();
-  refreshMatchPlayerList();
-  saveToLocalStorage();
-}
-
-function handleRoleDrop(e) {
-  e.preventDefault();
-  this.classList.remove("drag-over");
-  if (!draggedElement) return;
-  const slot = this.querySelector(".role-slot");
-  if (!slot) return;
-
-  const pId = parseInt(draggedElement.getAttribute("data-player-id"));
-  const name = getPlayerName(pId);
-
-  if (this.classList.contains("winner-target")) {
-    if (matchCalcState.type === "tenpai") {
-      if (!matchCalcState.winners.includes(pId)) {
-        if (matchCalcState.winners.length === 0) slot.innerHTML = "";
-        matchCalcState.winners.push(pId);
-        appendChipToSlot(slot, name, pId);
-      }
-    } else {
-      matchCalcState.winners = [pId];
-      slot.innerHTML = "";
-      appendChipToSlot(slot, name, pId);
-    }
+function selectManganScale(scale) {
+  document.querySelectorAll(".btn-scale").forEach((b) => b.classList.remove("active"));
+  if (matchCalcState.scale === scale) {
+    matchCalcState.scale = null;
   } else {
-    if (matchCalcState.type === "tenpai") return;
-    matchCalcState.loser = pId;
-    slot.innerHTML = "";
-    appendChipToSlot(slot, name, pId);
-  }
-}
-
-function appendChipToSlot(slot, name, pId) {
-  const chipDiv = document.createElement("div");
-  chipDiv.className = "match-player-chip";
-  chipDiv.style.margin = "2px";
-  chipDiv.innerText = name;
-  chipDiv.setAttribute("data-player-id", pId);
-  slot.appendChild(chipDiv);
-}
-
-function handleMatchTouchEnd(e) {
-  if (!draggedElement) return;
-  draggedElement.style.position = "";
-  draggedElement.style.zIndex = "";
-  draggedElement.style.left = "";
-  draggedElement.style.top = "";
-  draggedElement.style.width = "";
-
-  const changedTouch = e.changedTouches;
-  const targetEl = document.elementFromPoint(
-    changedTouch.clientX,
-    changedTouch.clientY,
-  );
-  const pId = parseInt(draggedElement.getAttribute("data-player-id"));
-  const name = getPlayerName(pId);
-
-  if (targetEl) {
-    const winnerBox = targetEl.closest(".winner-target");
-    const loserBox = targetEl.closest(".loser-target");
-
-    if (winnerBox) {
-      const slot = winnerBox.querySelector(".role-slot");
-      if (slot) {
-        if (matchCalcState.type === "tenpai") {
-          if (!matchCalcState.winners.includes(pId)) {
-            if (matchCalcState.winners.length === 0) slot.innerHTML = "";
-            matchCalcState.winners.push(pId);
-            appendChipToSlot(slot, name, pId);
-          }
-        } else {
-          matchCalcState.winners = [pId];
-          slot.innerHTML = "";
-          appendChipToSlot(slot, name, pId);
-        }
-      }
-    } else if (loserBox && matchCalcState.type !== "tenpai") {
-      const slot = loserBox.querySelector(".role-slot");
-      if (slot) {
-        matchCalcState.loser = pId;
-        slot.innerHTML = "";
-        appendChipToSlot(slot, name, pId);
-      }
+    matchCalcState.scale = scale;
+    if (event && event.target) {
+      event.target.classList.add("active");
     }
   }
-  document
-    .querySelectorAll(".role-box, .winner-target, .loser-target")
-    .forEach((b) => b.classList.remove("drag-over"));
-  draggedElement = null;
 }
+
+function clearRoleSlotsOnly() {
+  const sWinner = document.getElementById("slot-winner");
+  const sLoser = document.getElementById("slot-loser");
+  const lsWinner = document.getElementById("ls-slot-winner");
+  const lsLoser = document.getElementById("ls-slot-loser");
+
+  if (sWinner) sWinner.innerText = "ここにプレイヤーをドロップ";
+  if (sLoser) sLoser.innerText = "ここにプレイヤーをドロップ";
+  if (lsWinner) lsWinner.innerText = "ここにプレイヤーをドロップ";
+  if (lsLoser) lsLoser.innerText = "ここにプレイヤーをドロップ";
+
+  matchCalcState.winners = [];
+  matchCalcState.loser = null;
+  matchCalcState.scale = null;
+  document.querySelectorAll(".btn-scale").forEach((b) => b.classList.remove("active"));
+}
+
+function clearRoleSlots() {
+  clearRoleSlotsOnly();
+  setAgariType("ron");
+}
+
 function executePointTransfer() {
   if (matchCalcState.type !== "tenpai" && matchCalcState.winners.length === 0) {
     alert("和了者(アガリ)を設定してください");
@@ -944,18 +778,9 @@ function executePointTransfer() {
     if (tenpaiCount > 0 && noTenCount > 0) {
       let plusScore = 0;
       let minusScore = 0;
-      if (tenpaiCount === 1) {
-        plusScore = 3000;
-        minusScore = 3000 / noTenCount;
-      }
-      if (tenpaiCount === 2) {
-        plusScore = 1500;
-        minusScore = 1500;
-      }
-      if (tenpaiCount === 3) {
-        plusScore = 1000;
-        minusScore = 3000;
-      }
+      if (tenpaiCount === 1) { plusScore = 3000; minusScore = 3000 / noTenCount; }
+      if (tenpaiCount === 2) { plusScore = 1500; minusScore = 1500; }
+      if (tenpaiCount === 3) { plusScore = 1000; minusScore = 3000; }
 
       allActive.forEach((pId) => {
         if (matchCalcState.winners.includes(pId)) {
@@ -978,16 +803,11 @@ function executePointTransfer() {
     let pointsKoPays = 0;
 
     if (matchCalcState.scale) {
-      if (matchCalcState.scale === "mangan")
-        pointsWinnerGets = isWinnerOya ? 12000 : 8000;
-      if (matchCalcState.scale === "hanman")
-        pointsWinnerGets = isWinnerOya ? 18000 : 12000;
-      if (matchCalcState.scale === "baiman")
-        pointsWinnerGets = isWinnerOya ? 24000 : 16000;
-      if (matchCalcState.scale === "sanbaiman")
-        pointsWinnerGets = isWinnerOya ? 36000 : 24000;
-      if (matchCalcState.scale === "yakuman")
-        pointsWinnerGets = isWinnerOya ? 48000 : 32000;
+      if (matchCalcState.scale === "mangan") pointsWinnerGets = isWinnerOya ? 12000 : 8000;
+      if (matchCalcState.scale === "hanman") pointsWinnerGets = isWinnerOya ? 18000 : 12000;
+      if (matchCalcState.scale === "baiman") pointsWinnerGets = isWinnerOya ? 24000 : 16000;
+      if (matchCalcState.scale === "sanbaiman") pointsWinnerGets = isWinnerOya ? 36000 : 24000;
+      if (matchCalcState.scale === "yakuman") pointsWinnerGets = isWinnerOya ? 48000 : 32000;
 
       if (matchCalcState.type === "tsumo") {
         if (isWinnerOya) {
@@ -997,7 +817,8 @@ function executePointTransfer() {
           pointsKoPays = pointsWinnerGets / 4;
         }
       }
-    } else {
+    }
+    else {
       const hanEl = document.getElementById("select-han");
       const han = hanEl ? parseInt(hanEl.value) : 1;
       if (han === 1) pointsWinnerGets = isWinnerOya ? 1500 : 1000;
@@ -1007,11 +828,10 @@ function executePointTransfer() {
 
       if (matchCalcState.type === "tsumo") {
         if (isWinnerOya) {
-          pointsKoPays =
-            Math.ceil(pointsWinnerGets / (appState.tableSize - 1) / 100) * 100;
+          pointsKoPays = Math.ceil((pointsWinnerGets / (appState.tableSize - 1)) / 100) * 100;
         } else {
-          pointsOyaPays = Math.ceil(pointsWinnerGets / 2 / 100) * 100;
-          pointsKoPays = Math.ceil(pointsWinnerGets / 4 / 100) * 100;
+          pointsOyaPays = Math.ceil((pointsWinnerGets / 2) / 100) * 100;
+          pointsKoPays = Math.ceil((pointsWinnerGets / 4) / 100) * 100;
         }
       }
     }
@@ -1021,17 +841,15 @@ function executePointTransfer() {
 
     if (matchCalcState.type === "ron") {
       appState.currentPoints[winnerId] += pointsWinnerGets + honbaValue;
-      appState.currentPoints[matchCalcState.loser] -=
-        pointsWinnerGets + honbaValue;
+      appState.currentPoints[matchCalcState.loser] -= (pointsWinnerGets + honbaValue);
     } else {
-      appState.currentPoints[winnerId] +=
-        pointsWinnerGets + (appState.tableSize - 1) * honbaTsumoValue;
+      appState.currentPoints[winnerId] += pointsWinnerGets + (appState.tableSize - 1) * honbaTsumoValue;
       appState.activePlayers.forEach((pId) => {
         if (pId === winnerId) return;
         if (currentOyaId === pId) {
-          appState.currentPoints[pId] -= pointsOyaPays + honbaTsumoValue;
+          appState.currentPoints[pId] -= (pointsOyaPays + honbaTsumoValue);
         } else {
-          appState.currentPoints[pId] -= pointsKoPays + honbaTsumoValue;
+          appState.currentPoints[pId] -= (pointsKoPays + honbaTsumoValue);
         }
       });
     }
@@ -1040,7 +858,7 @@ function executePointTransfer() {
       appState.currentPoints[winnerId] += appState.kyotakuCount * 1000;
       appState.kyotakuCount = 0;
     }
-
+    
     if (isWinnerOya) {
       isRenchan = true;
       appState.honbaCount += 1;
@@ -1055,7 +873,7 @@ function executePointTransfer() {
   } else {
     const modeSelect = document.getElementById("game-mode-select");
     const modeVal = modeSelect ? modeSelect.value : "4";
-
+    
     if (modeVal === "4-3打ち") {
       const oldOya = appState.activePlayers.shift();
       appState.activePlayers.push(appState.subPlayer);
@@ -1065,9 +883,7 @@ function executePointTransfer() {
         appState.currentKyoku = 1;
         appState.currentWind += 1;
       }
-      alert(
-        `親移動交代:「${getPlayerName(oldOya)}」が控えへ、お休みの「${getPlayerName(appState.activePlayers[2])}」が卓に入りました！`,
-      );
+      alert(`親移動交代:「${getPlayerName(oldOya)}」が控えへ、お休みの「${getPlayerName(appState.activePlayers[2])}」が卓に入りました！`);
     } else {
       const shiftedPlayer = appState.activePlayers.shift();
       appState.activePlayers.push(shiftedPlayer);
@@ -1092,21 +908,19 @@ function rollDice() {
   const d1 = Math.floor(Math.random() * 6) + 1;
   const d2 = Math.floor(Math.random() * 6) + 1;
   const sum = d1 + d2;
-
+  
   const diceRes = document.getElementById("dice-result");
   if (diceRes) diceRes.innerText = `出目: ${sum} (${d1}, ${d2})`;
-
+  
   let targetWind = "";
   if ([5, 9].includes(sum)) targetWind = "東家(自家)";
   else if ([2, 6, 10].includes(sum)) targetWind = "南家(右面)";
   else if ([3, 7, 11].includes(sum)) targetWind = "西家(対面)";
   else if ([4, 8, 12].includes(sum)) targetWind = "北家(左面)";
-
+  
   const haipaiNavi = document.getElementById("haipai-navi");
-  if (haipaiNavi)
-    haipaiNavi.innerText = `${targetWind}の山、右から${sum}列残して開門`;
+  if (haipaiNavi) haipaiNavi.innerText = `${targetWind}の山、右から${sum}列残して開門`;
 }
-
 function endMatch() {
   let currentScores = [];
   for (let i = 0; i < appState.tableSize; i++) {
@@ -1120,8 +934,8 @@ function endMatch() {
   const is3人 = appState.tableSize === 3;
   const umaRuleEl = document.getElementById("rule-uma");
   const umaRule = umaRuleEl ? umaRuleEl.value : "10-30";
-
-  let uma = is3人 ? [0, 0, 0] : [0, 0, 0, 0];
+  
+  let uma = is3人 ? [10, 0, -10] : [20, 10, -10, -20];
   if (umaRule === "10-30") uma = is3人 ? [20, 0, -20] : [30, 10, -10, -30];
   if (umaRule === "10-20") uma = is3人 ? [10, 0, -10] : [20, 10, -10, -20];
   const oka = is3人 ? 15 : 20;
@@ -1135,17 +949,17 @@ function endMatch() {
     let roundedPt = Math.round(rawPt);
     let finalPt = roundedPt + uma[rank];
     if (rank === 0) finalPt += oka;
-
+    
     calculatedRows.push({
       rank: rank + 1,
       name: getPlayerName(item.id),
       score: item.score,
       pt: finalPt,
     });
-
+    
     if (room.stats[item.id] === undefined) room.stats[item.id] = 0;
     room.stats[item.id] += finalPt;
-
+    
     appState.playerMaster[item.id].totalGames++;
   });
 
@@ -1167,27 +981,24 @@ function openStats() {
   const tbody = document.getElementById("stats-table-body");
   if (!tbody) return;
   tbody.innerHTML = "";
-
-  const room = appState.rooms[appState.currentRoomName] || {
-    gameCount: 0,
-    stats: {},
-  };
-
+  
+  const room = appState.rooms[appState.currentRoomName] || { gameCount: 0, stats: {} };
+  
   let sortedStats = Object.keys(room.stats)
     .map((pId) => {
-      return {
-        id: pId,
-        name: getPlayerName(pId),
-        pt: room.stats[pId],
+      return { 
+        id: pId, 
+        name: getPlayerName(pId), 
+        pt: room.stats[pId] 
       };
     })
     .sort((a, b) => b.pt - a.pt);
-
+    
   sortedStats.forEach((item) => {
     const tr = document.createElement("tr");
     const ptClass = item.pt >= 0 ? "pt-plus" : "pt-minus";
     const ptSign = item.pt > 0 ? "+" : "";
-
+    
     tr.innerHTML = `
       <td><strong>${item.name}</strong> <span style="font-size:10px; color:#64748b;">(#${item.id})</span></td>
       <td class="text-center font-mono">${room.gameCount}</td>
@@ -1195,12 +1006,12 @@ function openStats() {
     `;
     tbody.appendChild(tr);
   });
-
+  
   const titleEl = document.querySelector("#screen-stats .title");
   if (titleEl) {
     titleEl.innerHTML = `総成績表<div class="subtitle">現在のルーム: ${appState.currentRoomName}</div>`;
   }
-
+  
   const statsScreen = document.getElementById("screen-stats");
   if (statsScreen) statsScreen.classList.remove("hidden");
 }
@@ -1232,11 +1043,7 @@ function switchScreen(fromId, toId) {
 }
 
 function resetAllAppStorageData() {
-  if (
-    confirm(
-      "これまでの累積名簿や全ルーム成績を含むすべてのデータを完全にリセットしますか？",
-    )
-  ) {
+  if (confirm("これまでの累積名簿や全ルーム成績を含むすべてのデータを完全にリセットしますか？")) {
     localStorage.removeItem("mj_manager_state");
     location.reload();
   }

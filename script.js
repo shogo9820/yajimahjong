@@ -369,21 +369,28 @@ function handleTouchStart(e) {
   draggedElement = this;
   const touch = e.touches[0];
   const rect = this.getBoundingClientRect();
+  
+  // 🚨 画面上の絶対位置から指のズレ（オフセット）を正確に計算（回転要素の影響を遮断）
   touchOffsetLeft = touch.clientX - rect.left;
   touchOffsetTop = touch.clientY - rect.top;
 
   this.style.position = "fixed";
   this.style.zIndex = "1000";
   this.style.width = `${rect.width}px`;
+  
+  // 🚨 横持ちの席（transformによる回転）から隔離するため、一時的に回転を打ち消す
+  this.style.transform = "none"; 
+  
   moveAt(touch.clientX, touch.clientY);
 }
 
 function handleTouchMove(e) {
   if (!draggedElement) return;
-  e.preventDefault();
+  e.preventDefault(); // スクロールを防止
   const touch = e.touches[0];
   moveAt(touch.clientX, touch.clientY);
 
+  // 指の直下にある要素を正確に検知
   const elementTarget = document.elementFromPoint(touch.clientX, touch.clientY);
   document.querySelectorAll(".seat-box, .role-box, .winner-target, .loser-target").forEach((s) => s.classList.remove("drag-over"));
 
@@ -689,18 +696,22 @@ function appendChipToSlot(slot, name, pId) {
 
 function handleMatchTouchEnd(e) {
   if (!draggedElement) return;
+  
+  // チップに一時的に付与していた fixed や transform の設定をきれいにリセット
   draggedElement.style.position = "";
   draggedElement.style.zIndex = "";
   draggedElement.style.left = "";
   draggedElement.style.top = "";
   draggedElement.style.width = "";
+  draggedElement.style.transform = "";
 
-  const changedTouch = e.changedTouches;
+  const changedTouch = e.changedTouches[0];
   const targetEl = document.elementFromPoint(changedTouch.clientX, changedTouch.clientY);
   const pId = parseInt(draggedElement.getAttribute("data-player-id"));
   const name = getPlayerName(pId);
 
   if (targetEl) {
+    // 🚨 縦画面・横画面どちらの「winner-target」「loser-target」クラスのドロップ枠でも検知できるように統一
     const winnerBox = targetEl.closest(".winner-target");
     const loserBox = targetEl.closest(".loser-target");
     
@@ -731,6 +742,7 @@ function handleMatchTouchEnd(e) {
   document.querySelectorAll(".role-box, .winner-target, .loser-target").forEach((b) => b.classList.remove("drag-over"));
   draggedElement = null;
 }
+
 function setAgariType(type) {
   matchCalcState.type = type;
 
@@ -959,13 +971,14 @@ function executePointTransfer() {
   saveToLocalStorage();
 }
 
+// 縦画面・横画面どちらのサイコロボタンを押してもエラーを出さずにリアルタイム同期する関数
 function rollDice() {
   const d1 = Math.floor(Math.random() * 6) + 1;
   const d2 = Math.floor(Math.random() * 6) + 1;
   const sum = d1 + d2;
   
-  const diceRes = document.getElementById("dice-result");
-  if (diceRes) diceRes.innerText = `出目: ${sum} (${d1}, ${d2})`;
+  // 画面に流し込むテキストを作成
+  const resultText = `出目: ${sum} (${d1}, ${d2})`;
   
   let targetWind = "";
   if ([5, 9].includes(sum)) targetWind = "東家(自家)";
@@ -973,9 +986,28 @@ function rollDice() {
   else if ([3, 7, 11].includes(sum)) targetWind = "西家(対面)";
   else if ([4, 8, 12].includes(sum)) targetWind = "北家(左面)";
   
+  const naviText = `${targetWind}の山、右から${sum}列残して開門`;
+
+  // 1. 📱 縦画面用の表示枠（存在する場合のみ安全に書き換え）
+  const diceRes = document.getElementById("dice-result");
   const haipaiNavi = document.getElementById("haipai-navi");
-  if (haipaiNavi) haipaiNavi.innerText = `${targetWind}の山、右から${sum}列残して開門`;
+  if (diceRes) diceRes.innerText = resultText;
+  if (haipaiNavi) haipaiNavi.innerText = naviText;
+
+  // 2. 💻 横画面用の表示枠（存在する場合のみ安全に書き換え）
+  // 🚨【エラー回避の核心】要素が存在するかチェック（if判定）を挟むことで、
+  // 片方の画面にナビ用の枠がなくてもプログラムがクラッシュせず、出目だけを確実に描画します。
+  const lsDiceRes = document.getElementById("ls-dice-result");
+  const lsHaipaiNavi = document.getElementById("ls-haipai-navi");
+  
+  if (lsDiceRes) {
+    lsDiceRes.innerText = resultText;
+  }
+  if (lsHaipaiNavi) {
+    lsHaipaiNavi.innerText = naviText;
+  }
 }
+
 // 半荘終了時のスコア精算とルームへの独立保存処理（エラー完全修正版）
 function endMatch() {
   let currentScores = [];

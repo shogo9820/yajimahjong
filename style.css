@@ -641,20 +641,47 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
 }
 
 /* ==========================================================================
-   🀄 横画面（Landscape）全方向麻雀卓レイアウト
+   📱 縦画面（Portrait）時の表示制御（デフォルト）
    ========================================================================== */
-@media (orientation: landscape), (min-width: 768px) {
+.view-landscape {
+  display: none !important; /* 縦の時は横画面ビューを完全非表示 */
+}
+
+.view-portrait {
+  display: flex !important;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+/* ==========================================================================
+   💻 横画面（Landscape）時の「二刀流」切り替えスタイル
+   ========================================================================== */
+@media screen and (orientation: landscape) {
   body {
     max-width: 100vw !important;
     padding: 8px !important;
+    height: 100vh !important;
+    overflow: hidden !important;
   }
 
-  .match-landscape-container {
+  .screen {
+    max-width: 100vw !important;
+    min-height: 100vh !important;
+    height: 100vh !important;
+  }
+
+  /* 縦用ビューを隠し、横用ビューを展開 */
+  .view-portrait {
+    display: none !important;
+  }
+
+  .view-landscape {
     display: grid !important;
     grid-template-columns: 1fr 340px;
     gap: 12px;
     width: 100%;
-    height: 100vh;
+    height: calc(100vh - 16px);
     box-sizing: border-box;
     overflow: hidden;
   }
@@ -671,9 +698,9 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
   .mahjong-table {
     position: relative;
     width: 100%;
-    max-width: 540px;
-    height: 94vh;
-    max-height: 540px;
+    max-width: 520px;
+    height: 92vh;
+    max-height: 520px;
     background-color: #0b1329;
     border: 3px solid #334155;
     border-radius: 24px;
@@ -683,7 +710,7 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
   /* 4席の位置指定 */
   .table-seat {
     position: absolute;
-    width: 200px;
+    width: 190px;
     background-color: #1e293b;
     border: 2px solid #475569;
     border-radius: 12px;
@@ -692,35 +719,35 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     box-sizing: border-box;
   }
 
-  /* 手前（自家） */
+  /* 手前（自家：0度） */
   .seat-bottom {
     bottom: 8px;
     left: 50%;
     transform: translateX(-50%);
   }
 
-  /* 奥（対面：180度回転） */
+  /* 奥（対面：180度） */
   .seat-top {
     top: 8px;
     left: 50%;
     transform: translateX(-50%) rotate(180deg);
   }
 
-  /* 左（上家：90度回転） */
+  /* 左（上家：90度） */
   .seat-left {
-    left: -35px;
+    left: -30px;
     top: 50%;
     transform: translateY(-50%) rotate(90deg);
   }
 
-  /* 右（下家：-90度回転） */
+  /* 右（下家：-90度） */
   .seat-right {
-    right: -35px;
+    right: -30px;
     top: 50%;
     transform: translateY(-50%) rotate(-90deg);
   }
 
-  /* 各席の2段デザイン */
+  /* 席内の2段レイアウト */
   .seat-header-row {
     display: flex;
     align-items: center;
@@ -734,36 +761,27 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
 
   .seat-score-text {
     font-family: monospace;
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 900;
     color: #34d399;
-    letter-spacing: 1px;
   }
 
-  /* 抜け番シートの専用スタイル */
+  /* 抜け番の座席スタイル */
   .seat-vacant {
     background-color: rgba(30, 41, 59, 0.4) !important;
     border: 2px dashed #475569 !important;
     opacity: 0.55;
     pointer-events: none;
   }
-  .vacant-badge {
-    background: #475569;
-    color: #cbd5e1;
-    font-size: 11px;
-    padding: 2px 8px;
-    border-radius: 6px;
-    font-weight: bold;
-  }
 
-  /* 卓中央ハブ */
+  /* 卓中央情報ハブ */
   .table-center-hub {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 100px;
-    height: 70px;
+    width: 96px;
+    height: 64px;
     background-color: #0f172a;
     border: 2px solid #334155;
     border-radius: 12px;
@@ -772,27 +790,14 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     align-items: center;
     justify-content: center;
   }
-  .center-round { font-size: 14px; font-weight: 900; color: #fbbf24; }
+  .center-round { font-size: 13px; font-weight: 900; color: #fbbf24; }
   .center-honba { font-size: 11px; color: #94a3b8; font-weight: bold; }
 
-  /* 右側サイドバー */
+  /* 右側サイドバー（精算パネル等） */
   .sidebar-panel-area {
     display: flex;
     flex-direction: column;
-    height: 96vh;
-  }
-  .border-top-sub { border-top: 1px solid rgba(51, 65, 85, 0.5); }
-  .wind-badge-sm {
-    width: 24px;
-    height: 24px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    font-weight: 900;
-    border-radius: 50%;
-    background-color: #1e293b;
-    border: 1px solid #475569;
-    color: #34d399;
+    height: 100%;
+    overflow-y: auto;
   }
 }

@@ -828,45 +828,75 @@ function resetAllAppStorageData() {
   }
 }
 
-// 卓上の物理的な4席（手前・右・奥・左）のDOM ID対応表
-const PHYSICAL_SEAT_IDS = [
-  "table-seat-bottom", // 手前 (Seat 0)
-  "table-seat-right",  // 右 (Seat 1)
-  "table-seat-top",    // 奥 (Seat 2)
-  "table-seat-left"    // 左 (Seat 3)
+// 横持ち卓の4席ID（手前・右・奥・左）
+const LANDSCAPE_SEAT_IDS = [
+  "ls-seat-bottom", // 手前 (Seat 0)
+  "ls-seat-right",  // 右 (Seat 1)
+  "ls-seat-top",    // 奥 (Seat 2)
+  "ls-seat-left"    // 左 (Seat 3)
 ];
 
 function refreshMatchPlayerList() {
   const modeVal = document.getElementById("game-mode-select").value;
-  const isSanma = appState.tableSize === 3; // 3人麻雀判定
+  const isSanma = appState.tableSize === 3;
 
-  // 1. 各席の風の割り当て（親の局番に応じて時計回りに循環）
-  // currentKyoku=1 なら [東, 南, 西, 北]、currentKyoku=2 なら [北, 東, 南, 西]
+  // ========================================================================
+  // 1. 📱 縦持ち用リストの描画（従来のロジック）
+  // ========================================================================
+  const listContainer = document.getElementById("match-players-list");
+  if (listContainer) {
+    listContainer.innerHTML = "";
+    for (let i = 0; i < appState.tableSize; i++) {
+      const pName = appState.activePlayers[i];
+      const wind = windLabels[i];
+      if (appState.currentPoints[pName] === undefined) {
+        appState.currentPoints[pName] = 25000;
+      }
+
+      const div = document.createElement("div");
+      div.className = "match-row";
+      div.id = `match-row-${pName}`;
+      div.innerHTML = `
+        <div class="flex items-center gap-1">
+          <span class="wind-badge">${wind}</span>
+          <button onclick="declareRiichi('${pName}')" class="btn-riichi">立直</button>
+          <div class="match-player-chip" id="m-chip-${i}" draggable="true">${pName}</div>
+        </div>
+        <input type="number" id="match-pt-${pName}" value="${appState.currentPoints[pName]}" step="100" class="input-score" onchange="syncManualScore('${pName}', this.value)">
+      `;
+
+      const chip = div.querySelector(".match-player-chip");
+      bindChipEvents(chip);
+      listContainer.appendChild(div);
+    }
+  }
+
+  // ========================================================================
+  // 2. 💻 横持ち用 4方向卓の描画（座席固定・風巡回・抜け番）
+  // ========================================================================
   const oyaOffset = (appState.currentKyoku - 1) % 4;
 
-  PHYSICAL_SEAT_IDS.forEach((seatId, physicalIndex) => {
+  LANDSCAPE_SEAT_IDS.forEach((seatId, physicalIndex) => {
     const seatEl = document.getElementById(seatId);
     if (!seatEl) return;
 
-    // 3人麻雀で「左の席（上家/Seat 3）」を固定で抜け番にする場合
+    // 3人麻雀時の「左（上家/Seat 3）」抜け番
     if (isSanma && physicalIndex === 3) {
-      seatEl.className = "table-seat seat-left rotate-90 seat-vacant";
+      seatEl.className = "table-seat seat-left seat-vacant";
       seatEl.innerHTML = `
         <div class="seat-header-row justify-center py-2">
           <span class="vacant-badge">抜け番 (不使用)</span>
         </div>
-        <div class="seat-score-row">
-          <span class="text-xs text-gray-500 font-mono">---</span>
-        </div>
+        <div class="seat-score-row"><span class="text-xs text-gray-500 font-mono">---</span></div>
       `;
       return;
     }
 
-    // 4人3打ちで現在控え（subPlayer）の席を判定
+    // 4人3打ち時の「控えプレイヤー」抜け番
     let pName = appState.activePlayers[physicalIndex];
     if (modeVal === "4-3打ち" && physicalIndex === 3) {
       pName = appState.subPlayer;
-      seatEl.className = "table-seat seat-left rotate-90 seat-vacant";
+      seatEl.className = "table-seat seat-left seat-vacant";
       seatEl.innerHTML = `
         <div class="seat-header-row justify-between">
           <span class="vacant-badge">控 (抜け番)</span>
@@ -879,7 +909,7 @@ function refreshMatchPlayerList() {
       return;
     }
 
-    // 通常のアクティブプレイヤー席の描画
+    // 通常席の描画
     seatEl.classList.remove("seat-vacant");
     const windIndex = (physicalIndex - oyaOffset + 4) % 4;
     const currentWind = windLabels[windIndex];
@@ -890,29 +920,37 @@ function refreshMatchPlayerList() {
       <div class="seat-header-row">
         <div class="flex items-center gap-1">
           <span class="wind-badge-sm ${isOya ? 'bg-amber-500 text-black font-black' : ''}">${currentWind}</span>
-          <button onclick="declareRiichi('${pName}')" class="btn-riichi">立直</button>
+          <button onclick="declareRiichi('${pName}')" class="btn-riichi" style="padding:2px 6px;font-size:10px;">立直</button>
         </div>
-        <div class="match-player-chip" id="m-chip-${physicalIndex}" draggable="true">${pName}</div>
+        <div class="match-player-chip" id="ls-chip-${physicalIndex}" draggable="true" style="font-size:12px;padding:2px 6px;">${pName}</div>
       </div>
       <div class="seat-score-row">
         <span class="seat-score-text">${pScore.toLocaleString()}</span>
       </div>
     `;
 
-    // ドラッグ＆ドロップイベントの再バインド
     const chip = seatEl.querySelector(".match-player-chip");
-    if (chip) {
-      chip.addEventListener("dragstart", handleDragStart);
-      chip.addEventListener("dragend", handleDragEnd);
-      chip.addEventListener("touchstart", handleTouchStart, { passive: false });
-      chip.addEventListener("touchmove", handleTouchMove, { passive: false });
-      chip.addEventListener("touchend", handleMatchTouchEnd);
-    }
+    bindChipEvents(chip);
   });
 
-  // 中央ハブの局数・本場更新
-  const centerRound = document.getElementById("center-round-text");
-  const centerHonba = document.getElementById("center-honba-text");
-  if (centerRound) centerRound.innerText = `${appState.currentWind === 0 ? "東" : "南"} ${appState.currentKyoku} 局`;
-  if (centerHonba) centerHonba.innerText = `${appState.honbaCount} 本場`;
+  // ドロップ枠のイベントバインド（縦横両方）
+  const dropBoxes = document.querySelectorAll(".winner-target, .loser-target");
+  dropBoxes.forEach((box) => {
+    box.removeEventListener("dragover", handleDragOver);
+    box.removeEventListener("dragleave", handleDragLeave);
+    box.removeEventListener("drop", handleRoleDrop);
+    box.addEventListener("dragover", handleDragOver);
+    box.addEventListener("dragleave", handleDragLeave);
+    box.addEventListener("drop", handleRoleDrop);
+  });
+}
+
+// チップ用イベントバインド共通化ヘルパー
+function bindChipEvents(chip) {
+  if (!chip) return;
+  chip.addEventListener("dragstart", handleDragStart);
+  chip.addEventListener("dragend", handleDragEnd);
+  chip.addEventListener("touchstart", handleTouchStart, { passive: false });
+  chip.addEventListener("touchmove", handleTouchMove, { passive: false });
+  chip.addEventListener("touchend", handleMatchTouchEnd);
 }

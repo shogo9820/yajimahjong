@@ -997,6 +997,7 @@ function rollDice() {
   const haipaiNavi = document.getElementById("haipai-navi");
   if (haipaiNavi) haipaiNavi.innerText = `${targetWind}の山、右から${sum}列残して開門`;
 }
+// 半荘終了時のスコア精算とルームへの独立保存処理（エラー完全修正版）
 function endMatch() {
   let currentScores = [];
   for (let i = 0; i < appState.tableSize; i++) {
@@ -1017,17 +1018,7 @@ function endMatch() {
   const oka = is3人 ? 15 : 20;
 
   let room = appState.rooms[appState.currentRoomName];
-  // 変更後
   room.gameCount++;
-  currentScores.forEach((item, rank) => {
-    let finalPt = Math.round((item.score - baseReturn) / 1000) + uma[rank];
-    if (rank === 0) finalPt += oka;
-    
-    // ルームの中のプレイヤーデータに直接加算
-    const pData = room.players[item.id];
-    pData.points += finalPt;
-    pData.totalGames++;
-  });
 
   let calculatedRows = [];
   currentScores.forEach((item, rank) => {
@@ -1043,14 +1034,11 @@ function endMatch() {
       pt: finalPt,
     });
     
-    if (room.stats[item.id] === undefined) room.stats[item.id] = 0;
-    room.stats[item.id] += finalPt;
-    
-    // 🚨 実際にこの半荘を打ったプレイヤーだけルーム内の対局数をプラスする
-    if (room.playerGames[item.id] === undefined) room.playerGames[item.id] = 0;
-    room.playerGames[item.id]++;
-    
-    appState.playerMaster[item.id].totalGames++;
+    // ルーム内の該当プレイヤーデータに直接成績と対局数を加算する
+    if (room.players[item.id]) {
+      room.players[item.id].points += finalPt;
+      room.players[item.id].totalGames++;
+    }
   });
 
   const tbody = document.getElementById("result-table-body");
@@ -1067,24 +1055,31 @@ function endMatch() {
   switchScreen("screen-match", "screen-result");
 }
 
+// 累積成績表画面を開く（現在の選択ルームの順位表を安全に表示）
 function openStats() {
   const tbody = document.getElementById("stats-table-body");
   if (!tbody) return;
   tbody.innerHTML = "";
   
-  // 変更後
   const room = appState.rooms[appState.currentRoomName] || { gameCount: 0, players: {} };
+  
   let sortedStats = Object.keys(room.players)
     .map((pId) => {
       const p = room.players[pId];
-      return { id: pId, name: p.name, pt: p.points, games: p.totalGames };
+      return { 
+        id: pId, 
+        name: p.name, 
+        pt: p.points,
+        games: p.totalGames
+      };
     })
     .sort((a, b) => b.pt - a.pt);
-
+    
   sortedStats.forEach((item) => {
     const tr = document.createElement("tr");
     const ptClass = item.pt >= 0 ? "pt-plus" : "pt-minus";
     const ptSign = item.pt > 0 ? "+" : "";
+    
     tr.innerHTML = `
       <td><strong>${item.name}</strong> <span style="font-size:10px; color:#64748b;">(ID:${item.id})</span></td>
       <td class="text-center font-mono">${item.games}</td>

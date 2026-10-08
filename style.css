@@ -631,3 +631,11 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     padding: 4px;
     justify-content: center;
 }
+
+/* プレイヤー一覧カードを縦いっぱいに広げる設定 */
+#screen-register .scroll-box {
+    max-height: none;   /* 50vh の制限を解除 */
+    flex: 1;            /* 余っている縦スペースをめいっぱい使う */
+    min-height: 0;      /* flexbox内でスクロールを正常に効かせる必須指定 */
+    overflow-y: auto;
+}

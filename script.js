@@ -201,37 +201,6 @@ function deleteRoomPlayer(pId) {
   }
 }
 
-// プレイヤー名の一括確定処理
-function submitRegistration() {
-  const count = parseInt(document.getElementById("member-count-select").value);
-  const room = appState.rooms[appState.currentRoomName];
-  appState.allPlayers = [];
-
-  for (let i = 0; i < count; i++) {
-    const input = document.getElementById(`p-input-${i}`);
-    const val = input ? input.value.trim() : "";
-    if (!val) continue;
-
-    let pId = input.getAttribute("data-player-id");
-    if (!pId) {
-      pId = room.nextPlayerId;
-      room.players[pId] = { id: pId, name: val, totalGames: 0, points: 0 };
-      room.nextPlayerId++;
-    } else {
-      room.players[pId].name = val; // 名前が書き換えられたら上書き
-    }
-    appState.allPlayers.push(parseInt(pId));
-  }
-
-  if (appState.allPlayers.length < 3) {
-    alert("対局には最低3人以上のメンバーが必要です");
-    return;
-  }
-
-  setupDragAndDrop();
-  switchScreen("screen-register", "screen-rules");
-}
-
 // IDからプレイヤー名を引く関数のルーム完全紐づけ化
 function getPlayerName(id) {
   const room = appState.rooms[appState.currentRoomName];
@@ -271,35 +240,55 @@ function onRoomSelectChange() {
   }
 }
 
-// メンバー登録確定時の処理（ここで新規プレイヤーにIDを自動発行）
+// プレイヤー名の一括確定処理（ルーム未作成時の自動作成・エラー防止機能付き）
 function submitRegistration() {
-  const selectEl = document.getElementById("member-count-select");
-  if (!selectEl) return;
-  const count = parseInt(selectEl.value);
+  const countSelect = document.getElementById("member-count-select");
+  if (!countSelect) return;
+  const count = parseInt(countSelect.value);
   
-  appState.allPlayers = [];
-  
-  for (let i = 0; i < count; i++) {
-    const input = document.getElementById(`p-input-${i}`);
-    if (!input) return;
-    const val = input.value.trim();
-    if (!val) {
-      alert("全員の名前を入力するか、名簿から選択してください");
-      return;
-    }
-
-    let pId = input.getAttribute("data-selected-id");
-    
-    // 名簿から選んでいない、または名前が書き換えられている場合は新規プレイヤーとしてID発行
-    if (!pId || !appState.playerMaster[pId] || appState.playerMaster[pId].name !== val) {
-      pId = appState.nextPlayerId;
-      appState.playerMaster[pId] = { id: pId, name: val, totalGames: 0 };
-      appState.nextPlayerId++;
-    }
-
-    appState.allPlayers.push(parseInt(pId));
+  // 🚨【重要】現在選択・入力されているルーム名がroomsに存在しない場合、ここで強制的に初期箱を作成する
+  if (!appState.currentRoomName) {
+    appState.currentRoomName = "デフォルトルーム";
   }
   
+  if (!appState.rooms[appState.currentRoomName]) {
+    appState.rooms[appState.currentRoomName] = {
+      roomName: appState.currentRoomName,
+      gameCount: 0,
+      nextPlayerId: 1,
+      players: {},
+      playerGames: {}
+    };
+  }
+
+  const room = appState.rooms[appState.currentRoomName];
+  appState.allPlayers = [];
+
+  for (let i = 0; i < count; i++) {
+    const input = document.getElementById(`p-input-${i}`);
+    const val = input ? input.value.trim() : "";
+    if (!val) continue;
+
+    let pId = input.getAttribute("data-player-id");
+    
+    // まだIDがない新規登録プレイヤーの場合
+    if (!pId) {
+      pId = room.nextPlayerId;
+      room.players[pId] = { id: pId, name: val, totalGames: 0, points: 0 };
+      room.nextPlayerId++;
+    } else {
+      // 既存プレイヤーなら名前を最新状態に更新
+      room.players[pId].name = val;
+    }
+    appState.allPlayers.push(parseInt(pId));
+  }
+
+  if (appState.allPlayers.length < 3) {
+    alert("対局には最低3人以上のメンバーが必要です");
+    return;
+  }
+
+  // 最新状態にUIを同期して画面移動
   updateRoomSelectOptions();
   setupDragAndDrop();
   switchScreen("screen-register", "screen-rules");

@@ -434,7 +434,7 @@ function handleTouchEnd(e) {
   draggedElement = null;
 }
 
-// 対局開始処理（ルーム名の決定と各種進行状態の初期化）
+// 対局開始処理（ID不一致によるフリーズを修正した完全版）
 function startMatch() {
   // ルーム名設定の取得
   const newRoomInput = document.getElementById("new-room-input");
@@ -449,7 +449,7 @@ function startMatch() {
       roomName: appState.currentRoomName, 
       gameCount: 0, 
       stats: {},
-      playerGames: {} // 🚨【新設】各個人のこのルームでの打数を記録する場所
+      playerGames: {} // 各個人のこのルームでの打数を記録する場所
     };
   }
   if (!appState.rooms[appState.currentRoomName].playerGames) {
@@ -457,11 +457,16 @@ function startMatch() {
   }
 
   appState.activePlayers = [];
-  const modeSelect = document.getElementById("game-mode-select");
-  if (!modeSelect) return;
+  
+  // 🚨【バグ修正箇所】HTML側のルール設定にある麻雀種別（卓の人数）セレクトボックスの正しいID（またはフォールバック）を適用
+  const modeSelect = document.getElementById("game-mode-select") || document.getElementById("member-count-select");
+  if (!modeSelect) {
+    alert("設定読み込みエラー：ゲームモード選択欄が見つかりません。");
+    return;
+  }
   const modeVal = modeSelect.value;
 
-  if (modeVal === "4-3打ち") {
+  if (modeVal === "4-3打ち" || modeVal === "4-3") {
     appState.tableSize = 3;
     for (let i = 0; i < 3; i++) {
       const seatBox = document.getElementById(`seat-${i}`);
@@ -480,7 +485,7 @@ function startMatch() {
     }
     appState.subPlayer = parseInt(chip3.getAttribute("data-player-id"));
   } else {
-    appState.tableSize = parseInt(modeVal);
+    appState.tableSize = parseInt(modeVal) || 4;
     appState.subPlayer = null;
     for (let i = 0; i < appState.tableSize; i++) {
       const seatBox = document.getElementById(`seat-${i}`);
@@ -499,9 +504,11 @@ function startMatch() {
   appState.kyotakuCount = 0;
   appState.riichiPlayers = [];
   
+  // 初期持ち点の割り当て
   appState.activePlayers.forEach((pId) => (appState.currentPoints[pId] = 25000));
   if (appState.subPlayer) appState.currentPoints[appState.subPlayer] = 25000;
 
+  // 各種UIの更新と画面遷移
   updateUIKyokuDisplay();
   refreshMatchPlayerList();
   clearRoleSlots();

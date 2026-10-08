@@ -968,3 +968,13 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     gap: 4px;
   }
 }
+
+/* 🚨 画面切り替えの最優先ルール（何があってもhiddenを最優先にする） */
+.screen.hidden,
+#screen-register.hidden,
+#screen-rules.hidden,
+#screen-match.hidden,
+#screen-result.hidden,
+#screen-stats.hidden {
+  display: none !important;
+}

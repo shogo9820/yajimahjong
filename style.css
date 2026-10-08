@@ -641,10 +641,10 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
 }
 
 /* ==========================================================================
-   📱 縦画面（Portrait）時の表示制御（デフォルト）
+   📱 縦持ち（Portrait）完全復元スタイル：下部ボタン固定＆上部スクロール
    ========================================================================== */
 .view-landscape {
-  display: none !important; /* 縦の時は横画面ビューを完全非表示 */
+  display: none !important;
 }
 
 .view-portrait {
@@ -652,10 +652,32 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
   flex-direction: column;
   width: 100%;
   height: 100%;
+  max-height: 100vh;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* 縦持ちの上部スクロール領域（ヘッダー・プレイヤー・精算入力） */
+.portrait-scroll-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 縦持ちの最下部固定ボタンラッパー */
+.portrait-fixed-footer {
+  flex-shrink: 0;
+  padding-top: 8px;
+  padding-bottom: 4px;
+  background-color: #0f172a;
 }
 
 /* ==========================================================================
-   💻 横画面（Landscape）時の「二刀流」切り替えスタイル
+   💻 横持ち（Landscape）二刀流スタイル
    ========================================================================== */
 @media screen and (orientation: landscape) {
   body {
@@ -667,11 +689,9 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
 
   .screen {
     max-width: 100vw !important;
-    min-height: 100vh !important;
     height: 100vh !important;
   }
 
-  /* 縦用ビューを隠し、横用ビューを展開 */
   .view-portrait {
     display: none !important;
   }
@@ -686,7 +706,6 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     overflow: hidden;
   }
 
-  /* 卓エリア全体 */
   .table-board-area {
     display: flex;
     justify-content: center;
@@ -707,7 +726,6 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6);
   }
 
-  /* 4席の位置指定 */
   .table-seat {
     position: absolute;
     width: 190px;
@@ -719,54 +737,15 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     box-sizing: border-box;
   }
 
-  /* 手前（自家：0度） */
-  .seat-bottom {
-    bottom: 8px;
-    left: 50%;
-    transform: translateX(-50%);
-  }
+  .seat-bottom { bottom: 8px; left: 50%; transform: translateX(-50%); }
+  .seat-top    { top: 8px; left: 50%; transform: translateX(-50%) rotate(180deg); }
+  .seat-left   { left: -30px; top: 50%; transform: translateY(-50%) rotate(90deg); }
+  .seat-right  { right: -30px; top: 50%; transform: translateY(-50%) rotate(-90deg); }
 
-  /* 奥（対面：180度） */
-  .seat-top {
-    top: 8px;
-    left: 50%;
-    transform: translateX(-50%) rotate(180deg);
-  }
+  .seat-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+  .seat-score-row { text-align: center; }
+  .seat-score-text { font-family: monospace; font-size: 20px; font-weight: 900; color: #34d399; }
 
-  /* 左（上家：90度） */
-  .seat-left {
-    left: -30px;
-    top: 50%;
-    transform: translateY(-50%) rotate(90deg);
-  }
-
-  /* 右（下家：-90度） */
-  .seat-right {
-    right: -30px;
-    top: 50%;
-    transform: translateY(-50%) rotate(-90deg);
-  }
-
-  /* 席内の2段レイアウト */
-  .seat-header-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 2px;
-  }
-
-  .seat-score-row {
-    text-align: center;
-  }
-
-  .seat-score-text {
-    font-family: monospace;
-    font-size: 20px;
-    font-weight: 900;
-    color: #34d399;
-  }
-
-  /* 抜け番の座席スタイル */
   .seat-vacant {
     background-color: rgba(30, 41, 59, 0.4) !important;
     border: 2px dashed #475569 !important;
@@ -774,26 +753,19 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     pointer-events: none;
   }
 
-  /* 卓中央情報ハブ */
   .table-center-hub {
     position: absolute;
-    top: 50%;
-    left: 50%;
+    top: 50%; left: 50%;
     transform: translate(-50%, -50%);
-    width: 96px;
-    height: 64px;
+    width: 96px; height: 64px;
     background-color: #0f172a;
     border: 2px solid #334155;
     border-radius: 12px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
   }
   .center-round { font-size: 13px; font-weight: 900; color: #fbbf24; }
   .center-honba { font-size: 11px; color: #94a3b8; font-weight: bold; }
 
-  /* 右側サイドバー（精算パネル等） */
   .sidebar-panel-area {
     display: flex;
     flex-direction: column;

@@ -647,7 +647,7 @@ body {
 
   .view-landscape {
     display: grid !important;
-    grid-template-columns: 1fr 270px;
+    grid-template-columns: 1fr 320px;
     width: 100vw;
     height: 100vh;
     height: 100dvh;
@@ -671,8 +671,8 @@ body {
 
   .mahjong-table {
     position: relative;
-    width: min(calc(100vh - 4px), calc(100vw - 278px));
-    height: min(calc(100vh - 4px), calc(100vw - 278px));
+    width: min(calc(100vh - 4px), calc(100vw - 328px));
+    height: min(calc(100vh - 4px), calc(100vw - 328px));
     background-color: #0b1329;
     border: 3px solid #334155;
     border-radius: 20px;

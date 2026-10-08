@@ -641,17 +641,17 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
 }
 
 /* ==========================================================================
-   📱 縦持ち（Portrait）完全ノースクロール・1画面完結スタイル
-   ========================================================================== */
+   📱 縦持ち（Portrait）画面フル活用・余白ゼロノースクロールスタイル
+   ========================================================================= */
 @media screen and (orientation: portrait) {
   html, body {
     width: 100vw;
     height: 100vh;
     height: 100dvh;
     margin: 0 auto;
-    padding: 6px 10px;
+    padding: 6px 8px; /* 外枠マージンを最小限に */
     max-width: 440px;
-    overflow: hidden !important; /* 画面全体のスクロールを完全禁止 */
+    overflow: hidden !important;
     box-sizing: border-box;
   }
 
@@ -669,180 +669,127 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
   .view-portrait {
     display: flex !important;
     flex-direction: column;
-    justify-content: space-between; /* 上・中・下を均等にピタッとフィット */
     width: 100%;
     height: 100%;
     max-height: 100%;
     overflow: hidden !important;
     box-sizing: border-box;
-    gap: 6px;
+    gap: 6px; /* カード同士の間隔をピタッと詰める */
   }
 
-  /* 上部エリア（ノースクロール） */
+  /* 上部エリア：残りの縦幅をフルに使って配分 */
   .portrait-scroll-body {
     flex: 1;
     min-height: 0;
-    overflow: hidden !important; /* 内部スクロールも完全撤廃 */
+    overflow: hidden !important;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
     gap: 6px;
   }
 
-  /* カード共通の余白圧縮 */
-  .view-portrait .card {
-    padding: 8px 10px !important;
+  /* 1. ヘッダーカード */
+  .view-portrait .bg-dark-header {
+    flex-shrink: 0;
+    padding: 10px 12px !important;
     border-radius: 12px;
   }
 
-  .view-portrait .card-header {
-    padding: 4px 6px;
-    font-size: 11px;
-    margin-bottom: 2px;
+  /* 2. プレイヤー持ち点カード（縦にゆったり広げる） */
+  .view-portrait .portrait-scroll-body > .card:nth-child(2) {
+    flex: 1.1; /* 縦幅の余白を優先的に使って広げる */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    padding: 8px 12px !important;
+    border-radius: 12px;
   }
 
-  /* プレイヤー行のスリム化 */
+  .view-portrait #match-players-list {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    height: 100%;
+  }
+
   .view-portrait .match-row {
-    padding: 6px 8px !important;
+    padding: 6px 4px !important;
   }
 
   .view-portrait .wind-badge {
-    width: 26px;
-    height: 26px;
-    font-size: 12px;
-  }
-
-  .view-portrait .input-score {
-    width: 96px;
-    padding: 3px 8px;
-    font-size: 16px;
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
   }
 
   .view-portrait .match-player-chip {
-    padding: 3px 8px;
-    font-size: 12px;
+    padding: 5px 10px;
+    font-size: 13px;
   }
 
-  .view-portrait .btn-riichi {
-    padding: 3px 6px;
-    font-size: 10px;
-    margin-right: 4px;
+  .view-portrait .input-score {
+    width: 104px;
+    padding: 4px 8px;
+    font-size: 17px;
   }
 
-  /* 精算パネルのスリム化 */
+  /* 3. 精算パネルカード（下側の余白を埋めてフィット） */
+  .view-portrait .bg-panel {
+    flex: 1.3; /* 下側のスペースを埋める */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 10px 12px !important;
+    border-radius: 12px;
+  }
+
   .view-portrait .role-box {
-    min-height: 50px !important;
-    padding: 4px;
+    min-height: 54px !important;
+    padding: 6px;
   }
 
   .view-portrait .role-label {
-    font-size: 10px;
-    margin-bottom: 2px;
+    font-size: 11px;
+    margin-bottom: 3px;
   }
 
   .view-portrait .role-slot {
-    padding: 2px 4px;
-    font-size: 11px;
+    font-size: 12px;
+    padding: 4px;
   }
 
   .view-portrait .btn-type {
-    padding: 6px 4px;
-    font-size: 11px;
-  }
-
-  .view-portrait .btn-clear {
-    padding: 6px 8px;
-    font-size: 11px;
-  }
-
-  .view-portrait .btn-scale {
-    padding: 4px 8px;
-    font-size: 11px;
-  }
-
-  .view-portrait .input-label-sm {
-    font-size: 10px;
-    margin-bottom: 2px;
-  }
-
-  .view-portrait .inline-select-sm {
-    padding: 4px 6px;
+    padding: 8px 6px;
     font-size: 12px;
   }
 
-  /* 最下部固定実行ボタン（iPhone 13 Proのホームバー安全域を確保） */
+  .view-portrait .btn-scale {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+
+  .view-portrait .inline-select-sm {
+    padding: 6px 8px;
+    font-size: 13px;
+  }
+
+  /* 4. 最下部固定実行ボタン */
   .portrait-fixed-footer {
     flex-shrink: 0;
-    padding-top: 2px;
+    padding-top: 4px;
     padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
     box-sizing: border-box;
   }
 
   .portrait-fixed-footer .btn-execute {
-    padding: 11px;
-    font-size: 15px;
-    border-radius: 10px;
+    padding: 13px;
+    font-size: 16px;
+    font-weight: 900;
+    border-radius: 12px;
   }
 }
 
 /* ==========================================================================
-   📱 縦持ち（Portrait）完全独立スタイル（デフォルト）
-   ========================================================================== */
-html, body {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  height: 100%;
-  height: 100dvh;
-  overflow: hidden;
-  background-color: #0f172a;
-  color: #e2e8f0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  box-sizing: border-box;
-}
-
-/* 縦持ち時は最大幅440pxで中央配置 */
-@media screen and (orientation: portrait) {
-  body {
-    max-width: 440px;
-    margin: 0 auto;
-    padding: 8px 12px;
-  }
-
-  .view-landscape {
-    display: none !important;
-  }
-
-  .view-portrait {
-    display: flex !important;
-    flex-direction: column;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-  }
-
-  /* 上部スクロール領域（ヘッダー・持ち点・精算設定） */
-  .portrait-scroll-body {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding-right: 2px;
-  }
-
-  /* 下部固定ボタン：画面最下部に常駐し、ホームバーの余白を確保 */
-  .portrait-fixed-footer {
-    flex-shrink: 0;
-    padding-top: 8px;
-    padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
-    background-color: #0f172a;
-  }
-}
-
-/* ==========================================================================
-   💻 横持ち（Landscape）完全独立スタイル
+   💻 横持ち（Landscape）mahjong-table限界最大化・超特大視認性スタイル
    ========================================================================== */
 @media screen and (orientation: landscape) {
   body {
@@ -854,84 +801,168 @@ html, body {
     display: none !important;
   }
 
-  /* 画面全体を左右に均等配分（卓：auto / パネル：280px） */
   .view-landscape {
     display: grid !important;
-    grid-template-columns: 1fr 300px;
+    grid-template-columns: 1fr 270px; /* 右側精算パネルを必要最小限(270px)に絞り、卓の面積を最大化 */
     width: 100vw;
     height: 100vh;
     height: 100dvh;
     box-sizing: border-box;
     overflow: hidden;
-    padding-left: env(safe-area-inset-left, 8px);
-    padding-right: env(safe-area-inset-right, 8px);
+    padding-left: env(safe-area-inset-left, 4px);
+    padding-right: env(safe-area-inset-right, 4px);
     padding-top: 0;
     padding-bottom: env(safe-area-inset-bottom, 0);
   }
 
-  /* 左側：卓エリア（画面の縦幅に合わせて正方形を維持） */
+  /* 卓エリア全体：余白ゼロで画面いっぱいに */
   .table-board-area {
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100%;
-    padding: 6px;
+    width: 100%;
+    padding: 2px;
     box-sizing: border-box;
   }
 
+  /* 🀄 mahjong-table本体：画面の縦幅・横幅限界まで巨大化 */
   .mahjong-table {
     position: relative;
-    /* 画面高さ372pxに対してはみ出さないサイズ */
-    width: min(calc(100vh - 16px), calc(100vw - 320px));
-    height: min(calc(100vh - 16px), calc(100vw - 320px));
+    width: min(calc(100vh - 4px), calc(100vw - 278px));
+    height: min(calc(100vh - 4px), calc(100vw - 278px));
     background-color: #0b1329;
-    border: 2px solid #334155;
-    border-radius: 16px;
+    border: 3px solid #334155;
+    border-radius: 20px;
+    box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.8);
     box-sizing: border-box;
   }
 
-  /* 4席の位置指定（％指定にして画面サイズに自動追従） */
+  /* 🀄 プレイヤー座席カード（横幅210pxの特大仕様） */
   .table-seat {
     position: absolute;
-    width: 180px;
-    background-color: #1e293b;
-    border: 1px solid #475569;
-    border-radius: 8px;
-    padding: 4px 6px;
+    width: 210px; /* 卓の横幅に合わせてワイドに拡大 */
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border: 2px solid #475569;
+    border-radius: 12px;
+    padding: 6px 12px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
     box-sizing: border-box;
-    font-size: 11px;
+    z-index: 5;
   }
 
+  /* 4席の配置（卓の四辺ギリギリに配置して中央スペースを確保） */
   .seat-bottom { bottom: 4px; left: 50%; transform: translateX(-50%); }
   .seat-top    { top: 4px; left: 50%; transform: translateX(-50%) rotate(180deg); }
-  .seat-left   { left: 4px; top: 50%; transform: translateY(-50%) rotate(90deg); }
-  .seat-right  { right: 4px; top: 50%; transform: translateY(-50%) rotate(-90deg); }
+  .seat-left   { left: -24px; top: 50%; transform: translateY(-50%) rotate(90deg); }
+  .seat-right  { right: -24px; top: 50%; transform: translateY(-50%) rotate(-90deg); }
 
-  .seat-header-row { display: flex; align-items: center; justify-content: space-between; }
-  .seat-score-row { text-align: center; }
-  .seat-score-text { font-family: monospace; font-size: 16px; font-weight: 900; color: #34d399; }
+  /* 1段目：風＋立直＋名前 */
+  .seat-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
 
+  /* 風マーク（直径32pxの特大バッジ） */
+  .table-seat .wind-badge-sm {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+    font-weight: 900;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #0f172a;
+    border: 2px solid #475569;
+    color: #34d399;
+  }
+
+  /* 親番（東家）時の特大発光ハイライト */
+  .table-seat .wind-badge-sm.bg-amber-500 {
+    background-color: #f59e0b !important;
+    border-color: #fbbf24 !important;
+    color: #000000 !important;
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.75);
+  }
+
+  /* プレイヤー名チップ */
+  .table-seat .match-player-chip {
+    font-size: 14px !important;
+    font-weight: bold;
+    padding: 4px 12px !important;
+    border-radius: 8px;
+    background-color: #334155;
+    color: #ffffff;
+    max-width: 110px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .table-seat .btn-riichi {
+    padding: 4px 8px !important;
+    font-size: 12px !important;
+    font-weight: 900;
+    border-radius: 6px;
+  }
+
+  /* 2段目：点数表示（26px特大フォント） */
+  .seat-score-row {
+    text-align: center;
+    background-color: rgba(15, 23, 42, 0.7);
+    border-radius: 8px;
+    padding: 3px 0;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .seat-score-text {
+    font-family: monospace;
+    font-size: 26px !important; /* 卓の端からでもクッキリ見える超特大サイズ */
+    font-weight: 900;
+    color: #34d399;
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px rgba(52, 211, 153, 0.35);
+  }
+
+  /* 抜け番の席 */
+  .seat-vacant {
+    background: rgba(15, 23, 42, 0.5) !important;
+    border: 2px dashed #475569 !important;
+    opacity: 0.5;
+  }
+
+  /* 卓中央ハブ */
   .table-center-hub {
     position: absolute;
-    top: 50%; left: 50%;
+    top: 50%;
+    left: 50%;
     transform: translate(-50%, -50%);
-    width: 70px; height: 50px;
+    width: 84px;
+    height: 60px;
     background-color: #0f172a;
-    border: 1px solid #334155;
-    border-radius: 8px;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    border: 2px solid #334155;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+    z-index: 2;
   }
-  .center-round { font-size: 11px; font-weight: bold; color: #fbbf24; }
-  .center-honba { font-size: 10px; color: #94a3b8; }
+  .center-round { font-size: 13px; font-weight: 900; color: #fbbf24; }
+  .center-honba { font-size: 11px; color: #94a3b8; font-weight: bold; }
 
-  /* 右側サイドバー（精算パネル）：高さ100%内で独立スクロール */
+  /* 右側サイドバー */
   .sidebar-panel-area {
     display: flex;
     flex-direction: column;
     height: 100%;
-    padding: 6px;
+    padding: 4px;
     box-sizing: border-box;
     overflow-y: auto;
-    gap: 6px;
+    gap: 4px;
   }
 }

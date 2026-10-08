@@ -641,17 +641,20 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
 }
 
 /* ==========================================================================
-   📱 縦持ち（Portrait）見切れゼロ・完全1画面収容スタイル
+   📱 縦持ち（Portrait）iPhone 13 Pro 完全1画面収容（見切れ絶対阻止）
    ========================================================================== */
 @media screen and (orientation: portrait) {
-  /* 1. 最外枠：paddingを上下0にして、画面高さを厳密に100dvhに固定 */
+  /* 1. 画面の土台を画面枠(0,0,0,0)に完全ピン留め */
   html, body {
-    width: 100vw !important;
-    height: 100vh !important;
-    height: 100dvh !important;
-    max-height: 100dvh !important;
-    margin: 0 auto !important;
-    padding: 4px 8px 0 8px !important; /* 🎯 上4px、下は0pxにして下端の押し出しを根絶 */
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 4px 8px env(safe-area-inset-bottom, 6px) 8px !important;
     max-width: 440px !important;
     overflow: hidden !important;
     box-sizing: border-box !important;
@@ -660,29 +663,29 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
   .screen {
     width: 100% !important;
     height: 100% !important;
-    max-height: 100% !important;
     overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
 
   .view-landscape {
     display: none !important;
   }
 
-  /* 2. 縦持ち全体ラッパー：上下ぴったり配置 */
+  /* 2. 縦持ちコンテナ */
   .view-portrait {
     display: flex !important;
     flex-direction: column !important;
     width: 100% !important;
     height: 100% !important;
-    max-height: 100% !important;
     overflow: hidden !important;
+    gap: 4px !important;
     box-sizing: border-box !important;
-    gap: 4px !important; /* カード間の隙間を4pxに圧縮して高さを節約 */
   }
 
-  /* 3. 上部コンテンツエリア：余白をすべて吸収し、絶対に飛び出さない設定 */
+  /* 3. 上部コンテンツ群（伸縮を柔軟にして画面内に収める） */
   .portrait-scroll-body {
-    flex: 1 1 0% !important; /* 🎯 flex-shrinkを有効にし、画面内に強制収容 */
+    flex: 1 1 0% !important;
     min-height: 0 !important;
     overflow: hidden !important;
     display: flex !important;
@@ -690,22 +693,22 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     gap: 4px !important;
   }
 
-  /* ヘッダー：コンパクト化 */
+  /* ヘッダーカード */
   .view-portrait .bg-dark-header {
     flex-shrink: 0 !important;
     padding: 6px 10px !important;
-    border-radius: 10px !important;
+    border-radius: 8px !important;
   }
 
-  /* プレイヤー持ち点カード：自然に伸び縮みさせる */
+  /* 持ち点カード */
   .view-portrait .portrait-scroll-body > .card:nth-child(2) {
     flex: 1 1 auto !important;
     min-height: 0 !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: space-around !important;
-    padding: 6px 10px !important;
-    border-radius: 10px !important;
+    padding: 4px 8px !important;
+    border-radius: 8px !important;
   }
 
   .view-portrait #match-players-list {
@@ -713,44 +716,77 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     flex-direction: column !important;
     justify-content: space-around !important;
     height: 100% !important;
+    min-height: 0 !important;
   }
 
   .view-portrait .match-row {
-    padding: 3px 2px !important;
+    padding: 2px 0 !important;
   }
 
-  /* 精算パネルカード：中身に合わせて自然にフィット */
+  .view-portrait .input-score {
+    width: 88px !important;
+    padding: 2px 6px !important;
+    font-size: 15px !important;
+  }
+
+  /* 精算パネル（高さを抑えてボタンを押し下げないようにする） */
   .view-portrait .bg-panel {
-    flex: 1.2 1 auto !important;
+    flex: 1.1 1 auto !important;
     min-height: 0 !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: space-between !important;
-    padding: 8px 10px !important;
-    border-radius: 10px !important;
-    gap: 4px !important;
+    padding: 6px 8px !important;
+    border-radius: 8px !important;
+    gap: 3px !important;
   }
 
+  /* ドロップ枠の min-height を小さくして圧迫を排除 */
   .view-portrait .role-box {
-    min-height: 48px !important;
-    padding: 4px !important;
+    min-height: 40px !important;
+    height: 42px !important;
+    padding: 2px 4px !important;
   }
 
-  /* 4. 🎯 最下部固定実行ボタン：画面最下端にピタッと接地 */
+  .view-portrait .role-label {
+    font-size: 10px !important;
+    margin-bottom: 1px !important;
+  }
+
+  .view-portrait .role-slot {
+    font-size: 11px !important;
+    padding: 0 !important;
+  }
+
+  .view-portrait .btn-type {
+    padding: 5px 4px !important;
+    font-size: 11px !important;
+  }
+
+  .view-portrait .btn-scale {
+    padding: 4px 2px !important;
+    font-size: 11px !important;
+  }
+
+  .view-portrait .inline-select-sm {
+    padding: 3px 6px !important;
+    font-size: 12px !important;
+  }
+
+  /* 4. 最下部固定実行ボタン（最優先で画面内に確保） */
   .portrait-fixed-footer {
     flex-shrink: 0 !important;
+    width: 100% !important;
     padding-top: 2px !important;
-    /* iPhoneのホームバーがあれば最低限だけ余白を取り、余計なパディングを排除 */
-    padding-bottom: env(safe-area-inset-bottom, 4px) !important;
+    padding-bottom: 0 !important;
     box-sizing: border-box !important;
-    background-color: transparent !important;
   }
 
   .portrait-fixed-footer .btn-execute {
     padding: 10px !important;
     font-size: 15px !important;
     font-weight: 900 !important;
-    border-radius: 10px !important;
+    border-radius: 8px !important;
   }
 }
 

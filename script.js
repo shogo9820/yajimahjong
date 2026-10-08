@@ -608,6 +608,18 @@ function refreshMatchPlayerList() {
 
     const chip = seatEl.querySelector(".match-player-chip");
     bindChipEvents(chip);
+
+        // 通常席の描画ロジック（既存コード）の末尾あたり、bindChipEvents(chip); のすぐ下付近に追記
+    const stick = seatEl.querySelector(".riichi-stick");
+    if (stick) {
+      // 今局、このプレイヤーがすでに立直済みリストに入っていれば棒を表示、いなければ非表示
+      if (appState.riichiPlayers.includes(pId)) {
+        stick.classList.remove("hidden");
+      } else {
+        stick.classList.add("hidden");
+      }
+    }
+
   });
 }
 

@@ -827,3 +827,92 @@ function resetAllAppStorageData() {
     location.reload();
   }
 }
+
+// 卓上の物理的な4席（手前・右・奥・左）のDOM ID対応表
+const PHYSICAL_SEAT_IDS = [
+  "table-seat-bottom", // 手前 (Seat 0)
+  "table-seat-right",  // 右 (Seat 1)
+  "table-seat-top",    // 奥 (Seat 2)
+  "table-seat-left"    // 左 (Seat 3)
+];
+
+function refreshMatchPlayerList() {
+  const modeVal = document.getElementById("game-mode-select").value;
+  const isSanma = appState.tableSize === 3; // 3人麻雀判定
+
+  // 1. 各席の風の割り当て（親の局番に応じて時計回りに循環）
+  // currentKyoku=1 なら [東, 南, 西, 北]、currentKyoku=2 なら [北, 東, 南, 西]
+  const oyaOffset = (appState.currentKyoku - 1) % 4;
+
+  PHYSICAL_SEAT_IDS.forEach((seatId, physicalIndex) => {
+    const seatEl = document.getElementById(seatId);
+    if (!seatEl) return;
+
+    // 3人麻雀で「左の席（上家/Seat 3）」を固定で抜け番にする場合
+    if (isSanma && physicalIndex === 3) {
+      seatEl.className = "table-seat seat-left rotate-90 seat-vacant";
+      seatEl.innerHTML = `
+        <div class="seat-header-row justify-center py-2">
+          <span class="vacant-badge">抜け番 (不使用)</span>
+        </div>
+        <div class="seat-score-row">
+          <span class="text-xs text-gray-500 font-mono">---</span>
+        </div>
+      `;
+      return;
+    }
+
+    // 4人3打ちで現在控え（subPlayer）の席を判定
+    let pName = appState.activePlayers[physicalIndex];
+    if (modeVal === "4-3打ち" && physicalIndex === 3) {
+      pName = appState.subPlayer;
+      seatEl.className = "table-seat seat-left rotate-90 seat-vacant";
+      seatEl.innerHTML = `
+        <div class="seat-header-row justify-between">
+          <span class="vacant-badge">控 (抜け番)</span>
+          <span class="text-xs font-bold text-gray-300">${pName || "控え"}</span>
+        </div>
+        <div class="seat-score-row">
+          <span class="seat-score-text text-sm" style="color:#94a3b8;">${appState.currentPoints[pName] || 25000}</span>
+        </div>
+      `;
+      return;
+    }
+
+    // 通常のアクティブプレイヤー席の描画
+    seatEl.classList.remove("seat-vacant");
+    const windIndex = (physicalIndex - oyaOffset + 4) % 4;
+    const currentWind = windLabels[windIndex];
+    const isOya = currentWind === "東";
+    const pScore = appState.currentPoints[pName] !== undefined ? appState.currentPoints[pName] : 25000;
+
+    seatEl.innerHTML = `
+      <div class="seat-header-row">
+        <div class="flex items-center gap-1">
+          <span class="wind-badge-sm ${isOya ? 'bg-amber-500 text-black font-black' : ''}">${currentWind}</span>
+          <button onclick="declareRiichi('${pName}')" class="btn-riichi">立直</button>
+        </div>
+        <div class="match-player-chip" id="m-chip-${physicalIndex}" draggable="true">${pName}</div>
+      </div>
+      <div class="seat-score-row">
+        <span class="seat-score-text">${pScore.toLocaleString()}</span>
+      </div>
+    `;
+
+    // ドラッグ＆ドロップイベントの再バインド
+    const chip = seatEl.querySelector(".match-player-chip");
+    if (chip) {
+      chip.addEventListener("dragstart", handleDragStart);
+      chip.addEventListener("dragend", handleDragEnd);
+      chip.addEventListener("touchstart", handleTouchStart, { passive: false });
+      chip.addEventListener("touchmove", handleTouchMove, { passive: false });
+      chip.addEventListener("touchend", handleMatchTouchEnd);
+    }
+  });
+
+  // 中央ハブの局数・本場更新
+  const centerRound = document.getElementById("center-round-text");
+  const centerHonba = document.getElementById("center-honba-text");
+  if (centerRound) centerRound.innerText = `${appState.currentWind === 0 ? "東" : "南"} ${appState.currentKyoku} 局`;
+  if (centerHonba) centerHonba.innerText = `${appState.honbaCount} 本場`;
+}

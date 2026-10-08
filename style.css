@@ -639,3 +639,160 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     min-height: 0;      /* flexbox内でスクロールを正常に効かせる必須指定 */
     overflow-y: auto;
 }
+
+/* ==========================================================================
+   🀄 横画面（Landscape）全方向麻雀卓レイアウト
+   ========================================================================== */
+@media (orientation: landscape), (min-width: 768px) {
+  body {
+    max-width: 100vw !important;
+    padding: 8px !important;
+  }
+
+  .match-landscape-container {
+    display: grid !important;
+    grid-template-columns: 1fr 340px;
+    gap: 12px;
+    width: 100%;
+    height: 100vh;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  /* 卓エリア全体 */
+  .table-board-area {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    position: relative;
+  }
+
+  .mahjong-table {
+    position: relative;
+    width: 100%;
+    max-width: 540px;
+    height: 94vh;
+    max-height: 540px;
+    background-color: #0b1329;
+    border: 3px solid #334155;
+    border-radius: 24px;
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6);
+  }
+
+  /* 4席の位置指定 */
+  .table-seat {
+    position: absolute;
+    width: 200px;
+    background-color: #1e293b;
+    border: 2px solid #475569;
+    border-radius: 12px;
+    padding: 6px 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    box-sizing: border-box;
+  }
+
+  /* 手前（自家） */
+  .seat-bottom {
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  /* 奥（対面：180度回転） */
+  .seat-top {
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%) rotate(180deg);
+  }
+
+  /* 左（上家：90度回転） */
+  .seat-left {
+    left: -35px;
+    top: 50%;
+    transform: translateY(-50%) rotate(90deg);
+  }
+
+  /* 右（下家：-90度回転） */
+  .seat-right {
+    right: -35px;
+    top: 50%;
+    transform: translateY(-50%) rotate(-90deg);
+  }
+
+  /* 各席の2段デザイン */
+  .seat-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2px;
+  }
+
+  .seat-score-row {
+    text-align: center;
+  }
+
+  .seat-score-text {
+    font-family: monospace;
+    font-size: 22px;
+    font-weight: 900;
+    color: #34d399;
+    letter-spacing: 1px;
+  }
+
+  /* 抜け番シートの専用スタイル */
+  .seat-vacant {
+    background-color: rgba(30, 41, 59, 0.4) !important;
+    border: 2px dashed #475569 !important;
+    opacity: 0.55;
+    pointer-events: none;
+  }
+  .vacant-badge {
+    background: #475569;
+    color: #cbd5e1;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-weight: bold;
+  }
+
+  /* 卓中央ハブ */
+  .table-center-hub {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100px;
+    height: 70px;
+    background-color: #0f172a;
+    border: 2px solid #334155;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .center-round { font-size: 14px; font-weight: 900; color: #fbbf24; }
+  .center-honba { font-size: 11px; color: #94a3b8; font-weight: bold; }
+
+  /* 右側サイドバー */
+  .sidebar-panel-area {
+    display: flex;
+    flex-direction: column;
+    height: 96vh;
+  }
+  .border-top-sub { border-top: 1px solid rgba(51, 65, 85, 0.5); }
+  .wind-badge-sm {
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 900;
+    border-radius: 50%;
+    background-color: #1e293b;
+    border: 1px solid #475569;
+    color: #34d399;
+  }
+}

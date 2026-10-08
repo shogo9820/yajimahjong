@@ -768,6 +768,32 @@ body {
     opacity: 0.5;
   }
 
+    /* 📍 もし座席ボックスの「箱の内側（下フチ）」にきれいに収めたい場合の設定 */
+  .seat-bottom .riichi-stick {
+    bottom: 4px; /* 箱の内側の下フチに配置 */
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .seat-top .riichi-stick {
+    top: 4px; /* 180度ひっくり返っているので、内側の下フチ（コード上はtop）に配置 */
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  /* 左右の席は箱が90度回転しているため、内側の下フチになるように調整します */
+  .seat-left .riichi-stick {
+    top: 50%;
+    left: 6px; /* 箱の内側（回転後の下フチ）に収める */
+    transform: translateY(-50%) rotate(90deg);
+  }
+
+  .seat-right .riichi-stick {
+    top: 50%;
+    right: 6px; /* 箱の内側（回転後の下フチ）に収める */
+    transform: translateY(-50%) rotate(90deg);
+  }
+
   .table-center-hub {
     position: absolute;
     top: 50%;

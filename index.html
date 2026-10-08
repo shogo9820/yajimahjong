@@ -334,23 +334,35 @@
   <div class="view-landscape">
     
     <!-- 左側：4方向全方向麻雀卓 -->
-    <div class="table-board-area">
-      <div class="mahjong-table">
-        <!-- 奥の席（対面：180度回転） -->
-        <div id="ls-seat-top" class="table-seat seat-top"></div>
-        <!-- 左の席（上家：90度回転） -->
-        <div id="ls-seat-left" class="table-seat seat-left"></div>
-        <!-- 卓中央ハブ（局数・本場） -->
-        <div class="table-center-hub">
-          <div id="ls-center-round" class="center-round">東 1 局</div>
-          <div id="ls-center-honba" class="center-honba">0 本場</div>
-        </div>
-        <!-- 右の席（下家：-90度回転） -->
-        <div id="ls-seat-right" class="table-seat seat-right"></div>
-        <!-- 手前の席（自家：正立0度） -->
-        <div id="ls-seat-bottom" class="table-seat seat-bottom"></div>
-      </div>
+<div class="table-board-area">
+  <div class="mahjong-table">
+    <!-- 奥の席（対面：180度回転） -->
+    <div id="ls-seat-top" class="table-seat seat-top">
+      <div class="riichi-stick hidden"></div>
     </div>
+    
+    <!-- 左の席（上家：90度回転） -->
+    <div id="ls-seat-left" class="table-seat seat-left">
+      <div class="riichi-stick hidden"></div>
+    </div>
+    
+    <!-- 卓中央ハブ（局数・本場） -->
+    <div class="table-center-hub">
+      <div id="ls-center-round" class="center-round">東 1 局</div>
+      <div id="ls-center-honba" class="center-honba">0 本場</div>
+    </div>
+    
+    <!-- 右の席（下家：-90度回転） -->
+    <div id="ls-seat-right" class="table-seat seat-right">
+      <div class="riichi-stick hidden"></div>
+    </div>
+    
+    <!-- 手前の席（自家：正立0度） -->
+    <div id="ls-seat-bottom" class="table-seat seat-bottom">
+      <div class="riichi-stick hidden"></div>
+    </div>
+  </div>
+</div>
 
     <!-- 右側：サイドバー情報＆精算パネル -->
     <div class="sidebar-panel-area">

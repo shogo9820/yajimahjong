@@ -1,5 +1,4 @@
 /* 基本設定 */
-/* 基本設定 */
 * {
     box-sizing: border-box;
     margin: 0;
@@ -13,18 +12,19 @@ body {
     background-color: #0f172a; /* 深みのあるダークブルー */
     color: #e2e8f0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    height: 100vh; /* 🚨画面サイズに完全に固定 */
-    max-height: 100vh;
-    padding: 12px;
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
+    padding: 10px 12px;
     max-width: 440px;
     margin: 0 auto;
-    overflow: hidden; /* 🚨画面全体の無駄なスクロールを強制カット */
+    overflow: hidden;
 }
 
 /* 画面と遷移制御 */
 .screen {
     width: 100%;
-    height: 100%; /* 親のbodyいっぱいに広げる */
+    height: 100%;
     display: flex;
     flex-direction: column;
 }
@@ -37,7 +37,6 @@ body {
 
 .flex-column { flex-direction: column; }
 .justify-between { justify-content: space-between; }
-.hidden { display: none !important; }
 
 /* タイポグラフィ・レイアウト */
 .text-center { text-align: center; }
@@ -47,6 +46,7 @@ body {
 .mb-2 { margin-bottom: 8px; }
 .mb-3 { margin-bottom: 12px; }
 .mb-4 { margin-bottom: 16px; }
+.mt-4 { margin-top: 16px; }
 .mt-6 { margin-top: 24px; }
 .ml-3 { margin-left: 12px; }
 .pl-3 { padding-left: 12px; }
@@ -80,7 +80,7 @@ body {
 
 /* カード・ボックス */
 .card {
-    background-color: #1e293b; /* 背景色を少し明るくして見やすく */
+    background-color: #1e293b;
     padding: 16px;
     border-radius: 16px;
     border: 1px solid #334155;
@@ -98,6 +98,7 @@ body {
     max-height: 50vh;
     overflow-y: auto;
 }
+.scroll-box-rules { max-height: 85vh; overflow-y: auto; padding-right: 2px; }
 .space-y-3 > * + * { margin-top: 12px; }
 
 .input-label {
@@ -110,7 +111,7 @@ body {
     padding-left: 8px;
 }
 
-/* 🚨 フォーム・入力欄（ここを大幅に強化しました） */
+/* フォーム・入力欄 */
 .form-select {
     width: 100%;
     background-color: #0f172a;
@@ -144,26 +145,24 @@ body {
 /* メンバーの名前を入れるテキストボックス */
 .form-input {
     flex: 1;
-    background-color: #0f172a; /* 入力欄の中身を暗く */
-    border: 2px solid #64748b; /* 枠線を太く、明るくして目立たせる */
+    background-color: #0f172a;
+    border: 2px solid #64748b;
     border-radius: 12px;
     padding: 12px 16px;
-    color: #ffffff; /* 入力した文字を真っ白に */
+    color: #ffffff;
     font-size: 16px !important;
     font-weight: 700;
     outline: none;
-    -webkit-user-select: text; /* スマホで文字入力を許可する必須設定 */
+    -webkit-user-select: text;
     user-select: text;
 }
 .form-input:focus { 
-    border-color: #34d399; /* タップした時は緑色に光る */
+    border-color: #34d399;
     background-color: #1e293b;
 }
-/* 入力前のヒント文字の色 */
 .form-input::placeholder {
     color: #64748b;
 }
-
 /* ボタン設定 */
 .btn {
     width: 100%;
@@ -314,88 +313,7 @@ body {
 }
 .border-bottom { border-bottom: 1px solid #1e293b; }
 
-/* (前半の共通スタイルはそのまま維持されます) */
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; background-color: #0f172a; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; min-height: 100vh; padding: 16px; max-width: 440px; margin: 0 auto; }
-.screen { width: 100%; min-height: calc(100vh - 32px); display: flex; }
-.flex-column { flex-direction: column; }
-.justify-between { justify-content: space-between; }
-.hidden { display: none !important; }
-.text-center { text-align: center; }
-.py-4 { padding-top: 16px; padding-bottom: 16px; }
-.pt-4 { padding-top: 16px; }
-.pt-2 { padding-top: 8px; }
-.mb-2 { margin-bottom: 8px; }
-.mb-3 { margin-bottom: 12px; }
-.mb-4 { margin-bottom: 16px; }
-.mt-4 { margin-top: 16px; }
-.mt-6 { margin-top: 24px; }
-.ml-3 { margin-left: 12px; }
-.pl-3 { padding-left: 12px; }
-.text-2xl { font-size: 24px; }
-.font-bold { font-weight: 700; }
-.font-black { font-weight: 900; }
-.font-mono { font-family: monospace; }
-.overflow-hidden { overflow: hidden; }
-.flex { display: flex; }
-.items-center { align-items: center; }
-.flex-1 { flex: 1; }
-.text-right { text-align: right; }
-.title { font-size: 24px; font-weight: 700; letter-spacing: 0.05em; }
-.subtitle { font-size: 12px; color: #94a3b8; margin-top: 4px; }
-.text-emerald { color: #34d399; }
-.text-amber { color: #fbbf24; }
-.text-rose { color: #f43f5e; }
-.text-sky { color: #38bdf8; }
-.text-teal { color: #2dd4bf; }
-.card { background-color: #1e293b; padding: 16px; border-radius: 16px; border: 1px solid #334155; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); }
-.card-sub { background-color: rgba(30, 41, 59, 0.4); padding: 12px; border-radius: 12px; border: 1px solid rgba(51, 65, 85, 0.4); }
-.bg-dark-header { background-color: rgba(30, 41, 59, 0.8); }
-.scroll-box { max-height: 50vh; overflow-y: auto; }
-.scroll-box-rules { max-height: 85vh; overflow-y: auto; padding-right: 2px; }
-.space-y-3 > * + * { margin-top: 12px; }
-.input-label { display: block; font-size: 13px; font-weight: 700; color: #cbd5e1; margin-bottom: 12px; border-left: 4px solid #34d399; padding-left: 8px; }
-.form-select { width: 100%; background-color: #0f172a; border: 2px solid #475569; border-radius: 12px; padding: 12px 16px; color: #f8fafc; font-size: 16px !important; font-weight: 700; outline: none; }
-.input-row { display: flex; align-items: center; }
-.input-row > * + * { margin-left: 12px; }
-.no-badge { width: 54px; text-align: center; font-size: 12px; font-weight: 700; color: #e2e8f0; background-color: #0f172a; padding: 10px 0; border-radius: 8px; border: 1px solid #475569; }
-.form-input { flex: 1; background-color: #0f172a; border: 2px solid #64748b; border-radius: 12px; padding: 12px 16px; color: #ffffff; font-size: 16px !important; font-weight: 700; outline: none; -webkit-user-select: text; user-select: text; }
-.form-input:focus { border-color: #34d399; background-color: #1e293b; }
-.form-input::placeholder { color: #64748b; }
-.btn { width: 100%; font-weight: 700; padding: 16px; border-radius: 12px; font-size: 18px; border: none; cursor: pointer; transition: background-color 0.15s; }
-.btn:active { transform: scale(0.98); }
-.btn-emerald { background-color: #10b981; color: #022c22; }
-.btn-amber { background-color: #f59e0b; color: #451a03; }
-.btn-rose { background-color: #f43f5e; color: #ffffff; padding: 14px; font-size: 16px; }
-.btn-sky { background-color: #0ea5e9; color: #0c4a6e; }
-.btn-dark { background-color: #1e293b; color: #cbd5e1; }
-.btn-dark-sub { background-color: #1e293b; color: #94a3b8; padding: 10px; font-size: 12px; }
-.btn-emerald-sub { background-color: #1e293b; color: #34d399; padding: 12px; font-size: 14px; }
-.card-header { background-color: rgba(51, 65, 85, 0.3); padding: 8px; font-size: 12px; font-weight: 700; color: #94a3b8; letter-spacing: 0.1em; }
-.table-rows > * { border-top: 1px solid rgba(51, 65, 85, 0.5); }
-.table-rows > *:first-child { border-top: none; }
-.table-row { display: flex; justify-content: space-between; padding: 14px; font-size: 14px; }
-.table-row span { color: #94a3b8; }
-.badge-honba { background-color: #0f172a; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; color: #fbbf24; margin-left: 12px; }
-.kyotaku-box { background-color: #0f172a; padding: 6px 12px; border-radius: 12px; border: 1px solid #334155; text-align: right; }
-.kyotaku-label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 2px; }
-.kyotaku-value { font-size: 14px; font-weight: 700; color: #f59e0b; }
-.btn-dice { background-color: #10b981; color: #022c22; font-weight: 700; font-size: 12px; padding: 8px 12px; border-radius: 8px; border: none; cursor: pointer; }
-.dice-text { font-size: 12px; font-weight: 700; color: #cbd5e1; }
-.navi-text { font-size: 12px; color: #34d399; font-weight: 500; margin-top: 2px; }
-.match-row { display: flex; align-items: center; justify-content: space-between; padding: 16px; }
-.wind-badge { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; border-radius: 50%; background-color: #1e293b; border: 1px solid #475569; color: #34d399; }
-.player-name-text { font-weight: 600; color: #e2e8f0; margin-left: 12px; }
-.input-score { width: 112px; background-color: #0f172a; border: 2px solid #64748b; text-align: right; font-family: monospace; font-weight: 700; font-size: 18px; color: #34d399; border-radius: 12px; padding: 6px 12px; outline: none; -webkit-user-select: text; user-select: text; }
-.result-table { width: 100%; border-collapse: collapse; text-align: left; }
-.result-table th { background-color: rgba(51, 65, 85, 0.4); font-size: 12px; font-weight: 700; color: #94a3b8; padding: 12px; }
-.result-table td { padding: 12px; font-size: 14px; border-top: 1px solid rgba(51, 65, 85, 0.5); }
-.pt-plus { color: #34d399; font-weight: 700; }
-.pt-minus { color: #f43f5e; font-weight: 700; }
-.full-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: #0f172a; z-index: 50; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; }
-.border-bottom { border-bottom: 1px solid #1e293b; }
-
-/* 🌟 追加した項目設定行のレイアウト */
+/* 追加した項目設定行のレイアウト */
 .table-row-flex {
     display: flex;
     justify-content: space-between;
@@ -415,7 +333,7 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     outline: none;
 }
 
-/* 🌟 ドラッグ＆ドロップ用 UI スタイル */
+/* ドラッグ＆ドロップ用 UI スタイル */
 .drag-instruction {
     font-size: 12px;
     color: #94a3b8;
@@ -441,12 +359,11 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     font-weight: 700;
     cursor: grab;
     user-select: none;
-    touch-action: none; /* スマホ画面の勝手なスクロールをブロック */
+    touch-action: none;
     border: 1px solid #475569;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 .player-chip:active { cursor: grabbing; background-color: #475569; }
-
 .seats-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -481,7 +398,7 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
 }
 .seat-label.active-wind { color: #fbbf24; }
 
-/* 🌟 アコーディオン用のスタイル */
+/* アコーディオン用のスタイル */
 .accordion-header {
     cursor: pointer;
     display: flex;
@@ -503,13 +420,13 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     color: #94a3b8;
 }
 .accordion-icon.open {
-    transform: rotate(180deg); /* 開いたときに矢印を上に向ける */
+    transform: rotate(180deg);
 }
 .hidden-accordion {
     display: none;
 }
 
-/* 🌟 対局中・直感精算パネル用スタイル */
+/* 対局中・直感精算パネル用スタイル */
 .scroll-box-match { max-height: 80vh; overflow-y: auto; padding-right: 2px; }
 .bg-panel { background-color: rgba(15, 23, 42, 0.6); border-color: rgba(52, 211, 153, 0.3); }
 .input-label-sm { font-size: 11px; color: #94a3b8; font-weight: bold; display: block; margin-bottom: 4px; }
@@ -562,9 +479,9 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     cursor: grab; display: inline-block; user-select: none; touch-action: none;
 }
 
-/* 🌟 聴牌ボタンアクティブ用の専用カラー */
+/* 聴牌ボタンアクティブ用の専用カラー */
 .btn-type.active-tenpai {
-    background-color: #d97706; /* 濃いアンバー */
+    background-color: #d97706;
     border-color: #f59e0b;
     color: #ffffff;
 }
@@ -572,9 +489,9 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     color: #fdba74;
 }
 
-/* 🌟 ヘッダー引っ越し版「終局」ボタンのスタイル */
+/* ヘッダー引っ越し版「終局」ボタンのスタイル */
 .btn-end-header {
-    background-color: #f43f5e; /* 鮮やかな赤色 */
+    background-color: #f43f5e;
     color: #ffffff;
     font-weight: 900;
     font-size: 14px;
@@ -602,11 +519,9 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     border: 1px solid rgba(245, 158, 11, 0.2);
 }
 
-/* 精算パネルを縦に大きく広げるための追加設定 */
 .flex-col { flex-direction: column; }
-.flex-1 { flex: 1; }
 
-/* 🌟 立直ボタンとスロットの複数ドロップ対応スタイル */
+/* 立直ボタンとスロットの複数ドロップ対応スタイル */
 .btn-riichi {
     background-color: #334155;
     border: 1px solid #475569;
@@ -616,6 +531,7 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     padding: 4px 8px;
     border-radius: 6px;
     cursor: pointer;
+    margin-left: 8px;
     margin-right: 8px;
     transition: all 0.1s;
 }
@@ -623,7 +539,7 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     background-color: #f59e0b;
     color: #000000;
 }
-/* タグが横並びや複数配置されても枠を広げる設定 */
+
 .role-slot.flex-wrap-gap {
     display: flex;
     flex-wrap: wrap;
@@ -631,24 +547,25 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     padding: 4px;
     justify-content: center;
 }
-
 /* プレイヤー一覧カードを縦いっぱいに広げる設定 */
 #screen-register .scroll-box {
-    max-height: none;   /* 50vh の制限を解除 */
-    flex: 1;            /* 余っている縦スペースをめいっぱい使う */
-    min-height: 0;      /* flexbox内でスクロールを正常に効かせる必須指定 */
+    max-height: none;
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
 }
 
 /* ==========================================================================
-   📱 縦持ち（Portrait）：確実復元・最下部ボタン固定スタイル
+   📱 縦持ち（Portrait）：漏れ出し完全遮断 ＆ iPhone下部見切れ解消スタイル
    ========================================================================== */
 @media screen and (orientation: portrait) {
   html, body {
     width: 100vw;
-    height: 100vh;
+    height: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
     margin: 0 auto;
-    padding: 8px 12px 0 12px !important; /* 画面下パディングはゼロ */
+    padding: 8px 12px env(safe-area-inset-bottom, 8px) 12px !important;
     max-width: 440px;
     overflow: hidden !important;
     box-sizing: border-box;
@@ -657,13 +574,29 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
   .screen {
     width: 100%;
     height: 100%;
+    max-height: 100%;
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
-    overflow: hidden;
+    overflow: hidden !important;
   }
 
-  /* 画面1・2・3・4の中央エリア：ここだけを縮ませてスクロールさせる */
+  /* 🚨【最重要】縦の時は横画面用の卓を100%完全に消滅させる！ */
+  .view-landscape {
+    display: none !important;
+  }
+
+  .view-portrait {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden !important;
+    box-sizing: border-box;
+  }
+
+  /* 上部スクロールエリア：ここだけを縮ませてスクロール可能にする */
   #screen-register > div:first-child,
   #screen-rules > div:nth-child(2),
   #screen-result > div:first-child,
@@ -671,31 +604,33 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     flex: 1 1 0% !important;
     min-height: 0 !important;
     overflow-y: auto !important;
+    padding-right: 2px;
+    margin-bottom: 6px !important;
   }
 
-  /* 🎯 ボタンを囲む一番下のブロック：下端から常に10px浮かせた位置に固定 */
+  /* 🎯 最下部固定ボタン：画面下端に固定し見切れを防止 */
   .fixed-bottom-btn-area,
   .portrait-fixed-footer {
-    margin-top: auto !important;
     flex-shrink: 0 !important;
-    padding-top: 6px !important;
-    padding-bottom: 12px !important; /* ボタン下の余白を12pxで物理固定 */
+    margin: 0 !important;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
     box-sizing: border-box !important;
     width: 100% !important;
   }
 
   .fixed-bottom-btn-area .btn,
-  .portrait-fixed-footer .btn {
+  .portrait-fixed-footer .btn,
+  .view-portrait .btn-execute {
     display: block !important;
     width: 100% !important;
     margin: 0 !important;
-    padding: 13px !important;
-    font-size: 16px !important;
+    padding: 12px !important;
+    font-size: 15px !important;
     font-weight: 800 !important;
-    border-radius: 12px !important;
+    border-radius: 10px !important;
   }
 }
-
 
 /* ==========================================================================
    💻 横持ち（Landscape）mahjong-table限界最大化・超特大視認性スタイル
@@ -712,7 +647,7 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
 
   .view-landscape {
     display: grid !important;
-    grid-template-columns: 1fr 270px; /* 右側精算パネルを必要最小限(270px)に絞り、卓の面積を最大化 */
+    grid-template-columns: 1fr 270px;
     width: 100vw;
     height: 100vh;
     height: 100dvh;
@@ -724,7 +659,6 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     padding-bottom: env(safe-area-inset-bottom, 0);
   }
 
-  /* 卓エリア全体：余白ゼロで画面いっぱいに */
   .table-board-area {
     display: flex;
     justify-content: center;
@@ -735,7 +669,6 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     box-sizing: border-box;
   }
 
-  /* 🀄 mahjong-table本体：画面の縦幅・横幅限界まで巨大化 */
   .mahjong-table {
     position: relative;
     width: min(calc(100vh - 4px), calc(100vw - 278px));
@@ -747,10 +680,9 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     box-sizing: border-box;
   }
 
-  /* 🀄 プレイヤー座席カード（横幅210pxの特大仕様） */
   .table-seat {
     position: absolute;
-    width: 210px; /* 卓の横幅に合わせてワイドに拡大 */
+    width: 210px;
     background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
     border: 2px solid #475569;
     border-radius: 12px;
@@ -760,13 +692,11 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     z-index: 5;
   }
 
-  /* 4席の配置（卓の四辺ギリギリに配置して中央スペースを確保） */
   .seat-bottom { bottom: 4px; left: 50%; transform: translateX(-50%); }
   .seat-top    { top: 4px; left: 50%; transform: translateX(-50%) rotate(180deg); }
   .seat-left   { left: -24px; top: 50%; transform: translateY(-50%) rotate(90deg); }
   .seat-right  { right: -24px; top: 50%; transform: translateY(-50%) rotate(-90deg); }
 
-  /* 1段目：風＋立直＋名前 */
   .seat-header-row {
     display: flex;
     align-items: center;
@@ -774,7 +704,6 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     margin-bottom: 4px;
   }
 
-  /* 風マーク（直径32pxの特大バッジ） */
   .table-seat .wind-badge-sm {
     width: 32px;
     height: 32px;
@@ -789,7 +718,6 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     color: #34d399;
   }
 
-  /* 親番（東家）時の特大発光ハイライト */
   .table-seat .wind-badge-sm.bg-amber-500 {
     background-color: #f59e0b !important;
     border-color: #fbbf24 !important;
@@ -797,7 +725,6 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     box-shadow: 0 0 12px rgba(245, 158, 11, 0.75);
   }
 
-  /* プレイヤー名チップ */
   .table-seat .match-player-chip {
     font-size: 14px !important;
     font-weight: bold;
@@ -818,7 +745,6 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
     border-radius: 6px;
   }
 
-  /* 2段目：点数表示（26px特大フォント） */
   .seat-score-row {
     text-align: center;
     background-color: rgba(15, 23, 42, 0.7);
@@ -829,21 +755,19 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
 
   .seat-score-text {
     font-family: monospace;
-    font-size: 26px !important; /* 卓の端からでもクッキリ見える超特大サイズ */
+    font-size: 26px !important;
     font-weight: 900;
     color: #34d399;
     letter-spacing: 2px;
     text-shadow: 0 0 10px rgba(52, 211, 153, 0.35);
   }
 
-  /* 抜け番の席 */
   .seat-vacant {
     background: rgba(15, 23, 42, 0.5) !important;
     border: 2px dashed #475569 !important;
     opacity: 0.5;
   }
 
-  /* 卓中央ハブ */
   .table-center-hub {
     position: absolute;
     top: 50%;
@@ -864,7 +788,6 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
   .center-round { font-size: 13px; font-weight: 900; color: #fbbf24; }
   .center-honba { font-size: 11px; color: #94a3b8; font-weight: bold; }
 
-  /* 右側サイドバー */
   .sidebar-panel-area {
     display: flex;
     flex-direction: column;
@@ -876,7 +799,7 @@ body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none
   }
 }
 
-/* 🚨 画面切り替えの最優先ルール（何があってもhiddenを最優先にする） */
+/* 🚨 画面切り替えの最優先ルール */
 .screen.hidden,
 #screen-register.hidden,
 #screen-rules.hidden,

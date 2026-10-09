@@ -531,20 +531,21 @@
         </button>
       </div>
     </div>
-    <!-- 📜 縦横・結果画面で使い回す共通の全画面ログモーダル -->
-<!-- 📜 共通ログモーダル（ゆったり余白・視認性最大化版） -->
-<div id="common-log-modal" class="full-modal hidden" style="z-index: 100; background-color: #0f172a; padding: 24px 20px 28px 20px !important;">
+<!-- 📜 共通ログモーダル（外枠の余白だけを最大拡張した決定版） -->
+<div id="common-log-modal" class="full-modal hidden" style="z-index: 100; background-color: #0f172a; padding: 36px 28px !important;">
   
-  <!-- ヘッダーエリア：ボタンとの間にしっかりスペースを確保 -->
-  <div class="flex justify-between items-center border-bottom mb-4" style="padding-bottom: 16px !important; margin-bottom: 20px !important;">
-    <span class="title text-emerald" style="font-size: 20px; font-weight: 800; letter-spacing: 0.05em;">🀄 対局精算ログ履歴</span>
+  <!-- ヘッダーエリア：外枠に合わせて下の隙間も調整 -->
+  <div class="flex justify-between items-center border-bottom mb-4" style="padding-bottom: 16px !important; margin-bottom: 24px !important;">
+    <span class="title text-emerald" style="font-size: 20px; font-weight: 800; letter-spacing: 0.05em;">🀄 对局精算ログ履歴</span>
     <button onclick="closeCommonLogModal()" class="btn-clear" style="padding: 8px 18px; font-size: 14px; background-color: #334155; border-radius: 6px; font-weight: bold;">閉じる</button>
   </div>
   
-  <!-- ログの中身が並ぶスクロールボックス：左右に余白を持たせ、下を16px浮かせる -->
+  <!-- ログの中身が並ぶスクロールボックス：中のログ同士の余白を壊さないよう、外側のパディングのみ確保 -->
   <div id="modal-log-list-area" style="flex: 1; overflow-y: auto; padding-left: 2px; padding-right: 6px;">
     <!-- ここにJavaScriptで構造化されたログが流し込まれます -->
   </div>
+  
+</div>
   
 </div>
     <script src="script.js"></script>

@@ -357,11 +357,14 @@
     </div>
     
     <!-- 卓中央ハブ（局数・本場） -->
-    <div class="table-center-hub">
-      <div id="ls-center-round" class="center-round">東 1 局</div>
-      <div id="ls-center-honba" class="center-honba">0 本場</div>
-    </div>
-    <button onclick="openCommonLogModal()" class="btn btn-dark-sub" style="width: 80px; margin-top: 8px;">点数ログ</button>
+<!-- ⭕ 修正後：ハブの箱の中にボタンを入れ込みます -->
+<div class="table-center-hub">
+  <div id="ls-center-round" class="center-round">東 1 局</div>
+  <div id="ls-center-honba" class="center-honba">0 本場</div>
+  
+  <!-- 🧳 ボタンをハブの中に引っ越し -->
+  <button onclick="openCommonLogModal()" class="btn-clear" style="width: 70px; padding: 2px 0; font-size: 10px; margin-top: 4px; background-color: #334155; border-radius: 4px; font-weight: bold; color: #cbd5e1;">ログ</button>
+</div>
     
     <!-- 右の席（下家：-90度回転） -->
     <div id="ls-seat-right" class="table-seat seat-right">

@@ -800,18 +800,24 @@ body {
     opacity: 0.5;
   }
 
+  /* ==========================================================================
+     💻 横持ち中央ハブ：ボタンを内側に綺麗に収めるためのサイズ微調整
+     ========================================================================== */
   .table-center-hub {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 84px;
-    height: 60px;
+    
+    /* 🚨 ボタンが入るスペースを確保するために縦幅を60pxから76pxに少し広げます */
+    width: 86px !important;
+    height: 76px !important;
+    
     background-color: #0f172a;
     border: 2px solid #334155;
     border-radius: 12px;
     display: flex;
-    flex-direction: column;
+    flex-direction: column;  /* 縦に綺麗に並べる */
     align-items: center;
     justify-content: center;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);

@@ -956,7 +956,7 @@ body {
   #screen-result {
     display: flex !important;
     flex-direction: column !important;
-    width: 100vw !important;
+    width: 95vw !important;
     height: 100vh !important;
     height: 100dvh !important;
     padding: 8px 16px env(safe-area-inset-bottom, 8px) 16px !important;

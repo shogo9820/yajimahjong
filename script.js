@@ -435,6 +435,7 @@ function handleTouchEnd(e) {
 }
 
 // 対局開始処理（ID不一致によるフリーズを修正した完全版）
+// 🀄 対局開始処理（【対局ログの完全リセット】＆ID不一致フリーズ修正版）
 function startMatch() {
   // ルーム名設定の取得
   const newRoomInput = document.getElementById("new-room-input");
@@ -458,7 +459,7 @@ function startMatch() {
 
   appState.activePlayers = [];
   
-  // 🚨【バグ修正箇所】HTML側のルール設定にある麻雀種別（卓の人数）セレクトボックスの正しいID（またはフォールバック）を適用
+  // 麻雀種別（卓の人数）セレクトボックスの正しいID（またはフォールバック）を適用
   const modeSelect = document.getElementById("game-mode-select") || document.getElementById("member-count-select");
   if (!modeSelect) {
     alert("設定読み込みエラー：ゲームモード選択欄が見つかりません。");
@@ -504,6 +505,15 @@ function startMatch() {
   appState.kyotakuCount = 0;
   appState.riichiPlayers = [];
   
+  // 🚨【ご要望の機能】「この配置で対局開始」を押した瞬間に、前の半荘のログデータを完全にリセット
+  appState.matchLogs = []; 
+  
+  // 共通ログモーダルの表示エリアも、空っぽの初期状態のテキストにリフレッシュ
+  const logBox = document.getElementById("modal-log-list-area");
+  if (logBox) {
+    logBox.innerHTML = '<div style="color: #64748b; text-align: center; padding-top: 40px; font-size: 14px;">まだこの半荘の精算履歴はありません。</div>';
+  }
+
   // 初期持ち点の割り当て
   appState.activePlayers.forEach((pId) => (appState.currentPoints[pId] = 25000));
   if (appState.subPlayer) appState.currentPoints[appState.subPlayer] = 25000;

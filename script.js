@@ -518,10 +518,10 @@ function startMatch() {
 function updateUIKyokuDisplay() {
   const roundStr = (appState.currentWind === 0 ? "東" : "南") + appState.currentKyoku + "局";
   
-  const wLabel = document.getElementById("current-wind-label");
-  const kNum = document.getElementById("current-kyoku-num");
-  const honba = document.getElementById("current-honba");
-  const kyotaku = document.getElementById("current-kyotaku");
+  const wLabel = document.getElementById("ls-wind-label");
+  const kNum = document.getElementById("ls-current-kyoku-num");
+  const honba = document.getElementById("ls-current-honba");
+  const kyotaku = document.getElementById("ls-current-kyotaku");
   if (wLabel) wLabel.innerText = appState.currentWind === 0 ? "東" : "南";
   if (kNum) kNum.innerText = appState.currentKyoku;
   if (honba) honba.innerText = `${appState.honbaCount} 本場`;

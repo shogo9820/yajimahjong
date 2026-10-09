@@ -518,10 +518,10 @@ function startMatch() {
 function updateUIKyokuDisplay() {
   const roundStr = (appState.currentWind === 0 ? "東" : "南") + appState.currentKyoku + "局";
   
-  const wLabel = document.getElementById("ls-wind-label");
-  const kNum = document.getElementById("ls-current-kyoku-num");
-  const honba = document.getElementById("ls-current-honba");
-  const kyotaku = document.getElementById("ls-current-kyotaku");
+  const wLabel = document.getElementById("current-wind-label");
+  const kNum = document.getElementById("current-kyoku-num");
+  const honba = document.getElementById("current-honba");
+  const kyotaku = document.getElementById("current-kyotaku");
   if (wLabel) wLabel.innerText = appState.currentWind === 0 ? "東" : "南";
   if (kNum) kNum.innerText = appState.currentKyoku;
   if (honba) honba.innerText = `${appState.honbaCount} 本場`;
@@ -666,26 +666,6 @@ function syncManualScore(pId, value) {
       if (scoreTxt) scoreTxt.innerText = (parseInt(value) || 0).toLocaleString();
     }
   });
-}
-
-function declareRiichi(pId) {
-  pId = parseInt(pId);
-  if (appState.riichiPlayers.includes(pId)) {
-    alert(`${getPlayerName(pId)} はすでに立直しています。`);
-    return;
-  }
-  if (appState.currentPoints[pId] < 1000) {
-    alert("持ち点が1,000点未満のため立直できません");
-    return;
-  }
-
-  appState.currentPoints[pId] -= 1000;
-  appState.kyotakuCount += 1;
-  appState.riichiPlayers.push(pId);
-
-  updateUIKyokuDisplay();
-  refreshMatchPlayerList();
-  saveToLocalStorage();
 }
 
 function handleRoleDrop(e) {
@@ -1174,25 +1154,33 @@ function resetAllAppStorageData() {
   }
 }
 
-// 立直ボタンが押されたときの処理
-function declareRiichi(playerId) {
-  // すでに立直している場合は何もしない（または解除）
-  if (appState.riichiPlayers.includes(playerId)) {
-    // 解除処理をする場合はここ（今回は割愛）
+// 🀄 立直ボタンが押されたときの処理（完全統合版：引数は pId で統一）
+function declareRiichi(pId) {
+  // 数値計算用に型を確実に数値に変換
+  pId = parseInt(pId);
+
+  // 1. すでに立直している場合は重複処理をしない
+  if (appState.riichiPlayers.includes(pId)) {
+    alert(`${getPlayerName(pId)} はすでに立直しています。`);
+    return;
+  }
+  
+  // 2. 持ち点チェック
+  if (appState.currentPoints[pId] < 1000) {
+    alert("持ち点が1,000点未満のため立直できません");
     return;
   }
 
-  // 立直プレイヤーのリストに登録し、点数を1000点引く
-  appState.riichiPlayers.push(playerId);
-  appState.currentPoints[playerId] -= 1000;
+  // 3. 内部データ計算（1000点マイナスと供託の加算）
+  appState.currentPoints[pId] -= 1000;
   appState.kyotakuCount += 1;
+  appState.riichiPlayers.push(pId);
 
-  // 🚨 提案通りの超シンプルな動き：最初からあるHTML要素の hidden を切り替えるだけ！
-  // 1. 縦画面側のリストの見た目を更新
-  const rowEl = document.getElementById(`match-row-${playerId}`);
+  // 4. 📱 縦画面側のリストに「立直中」のクラスを付与
+  const rowEl = document.getElementById(`match-row-${pId}`);
   if (rowEl) rowEl.classList.add("is-riichi");
 
-  // 2. 横画面側の対象プレイヤーが座っている席を探す
+  // 5. 💻 横画面側のあらかじめHTMLに置いてある立直棒を「表示」にする
   LANDSCAPE_SEAT_IDS.forEach((seatId, physicalIndex) => {
     // 4人3打ちの控えプレイヤーの場合は除外
     if (appState.tableSize === 3 && physicalIndex === 3 && document.getElementById("game-mode-select").value === "4-3打ち") {
@@ -1200,18 +1188,24 @@ function declareRiichi(playerId) {
     }
 
     const currentPlayerId = appState.activePlayers[physicalIndex];
-    if (currentPlayerId === playerId) {
+    if (currentPlayerId === pId) {
       const seatEl = document.getElementById(seatId);
       const stick = seatEl ? seatEl.querySelector(".riichi-stick") : null;
       if (stick) {
-        stick.classList.remove("hidden"); // 最初から置いてある棒を表示するだけ
+        stick.classList.remove("hidden"); // 最初から仕込んである赤丸付きの棒を出す
       }
     }
   });
 
-  // 点数などの数字パーツだけをリフレッシュ
-  updateUIKyokuDisplay();
-  // 手動入力フォームなどの数値だけを同期
-  const inputScore = document.getElementById(`match-pt-${playerId}`);
-  if (inputScore) inputScore.value = appState.currentPoints[playerId];
+  // 6. 🔢 点数入力フォームの数値を最新の点数（-1000点された値）に同期
+  const inputScore = document.getElementById(`match-pt-${pId}`);
+  if (inputScore) inputScore.value = appState.currentPoints[pId];
+
+  // 7. 👑 上部ヘッダーの「供託・本場バッジ」をリアルタイム更新
+  if (typeof updateUIKyokuDisplay === "function") {
+    updateUIKyokuDisplay();
+  }
+
+  // 8. 💾 状態をローカルストレージに保存
+  saveToLocalStorage();
 }

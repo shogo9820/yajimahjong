@@ -1173,3 +1173,45 @@ function resetAllAppStorageData() {
     location.reload();
   }
 }
+
+// 立直ボタンが押されたときの処理
+function declareRiichi(playerId) {
+  // すでに立直している場合は何もしない（または解除）
+  if (appState.riichiPlayers.includes(playerId)) {
+    // 解除処理をする場合はここ（今回は割愛）
+    return;
+  }
+
+  // 立直プレイヤーのリストに登録し、点数を1000点引く
+  appState.riichiPlayers.push(playerId);
+  appState.currentPoints[playerId] -= 1000;
+  appState.kyotakuCount += 1;
+
+  // 🚨 提案通りの超シンプルな動き：最初からあるHTML要素の hidden を切り替えるだけ！
+  // 1. 縦画面側のリストの見た目を更新
+  const rowEl = document.getElementById(`match-row-${playerId}`);
+  if (rowEl) rowEl.classList.add("is-riichi");
+
+  // 2. 横画面側の対象プレイヤーが座っている席を探す
+  LANDSCAPE_SEAT_IDS.forEach((seatId, physicalIndex) => {
+    // 4人3打ちの控えプレイヤーの場合は除外
+    if (appState.tableSize === 3 && physicalIndex === 3 && document.getElementById("game-mode-select").value === "4-3打ち") {
+      return; 
+    }
+
+    const currentPlayerId = appState.activePlayers[physicalIndex];
+    if (currentPlayerId === playerId) {
+      const seatEl = document.getElementById(seatId);
+      const stick = seatEl ? seatEl.querySelector(".riichi-stick") : null;
+      if (stick) {
+        stick.classList.remove("hidden"); // 最初から置いてある棒を表示するだけ
+      }
+    }
+  });
+
+  // 点数などの数字パーツだけをリフレッシュ
+  updateUIKyokuDisplay();
+  // 手動入力フォームなどの数値だけを同期
+  const inputScore = document.getElementById(`match-pt-${playerId}`);
+  if (inputScore) inputScore.value = appState.currentPoints[playerId];
+}

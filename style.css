@@ -680,6 +680,7 @@ body {
     box-sizing: border-box;
   }
 
+  /* 📦 各プレイヤーの座席ボックス */
   .table-seat {
     position: absolute;
     width: 210px;
@@ -692,10 +693,41 @@ body {
     z-index: 5;
   }
 
+  /* 箱自体の配置と回転ルール（立直棒もこの回転に自動で追従します） */
   .seat-bottom { bottom: 4px; left: 50%; transform: translateX(-50%); }
   .seat-top    { top: 4px; left: 50%; transform: translateX(-50%) rotate(180deg); }
   .seat-left   { left: -24px; top: 50%; transform: translateY(-50%) rotate(90deg); }
   .seat-right  { right: -24px; top: 50%; transform: translateY(-50%) rotate(-90deg); }
+
+  /* 1. 白い立直棒のベース（箱の上フチのすぐ外側に配置） */
+  .riichi-stick {
+    position: absolute !important;
+    top: -14px !important;                 /* 箱の「川側」の外フチにピタッと固定 */
+    left: 50% !important;                  /* 箱の横幅のちょうど真ん中 */
+    transform: translateX(-50%) !important; /* きれいにセンタリング */
+    
+    width: 60px !important;
+    height: 6px !important;
+    background-color: #f8fafc !important;  /* 綺麗な白色 */
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 3px !important;
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.6) !important;
+    z-index: 10;
+  }
+
+  /* 2. 🔴 棒の真ん中に入れる赤い丸（点棒のポッチ） */
+  .riichi-stick::after {
+    content: "" !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important; /* 縦横のど真ん中に配置 */
+    
+    width: 4px !important;
+    height: 4px !important;
+    background-color: #ef4444 !important;  /* 鮮やかな赤色 */
+    border-radius: 50% !important;         /* 完全な丸にする */
+  }
 
   .seat-header-row {
     display: flex;
@@ -768,53 +800,6 @@ body {
     opacity: 0.5;
   }
 
-  /* ==========================================================================
-     🀄 横持ち卓（Landscape）：座席ボックスから真ん中（内側）に向かって置く設定
-     ========================================================================== */
-
-  /* 共通の立直棒ベース：必ず seatEl の中に表示されるようにします */
-  .riichi-stick {
-    position: absolute !important;
-    width: 60px !important;
-    height: 6px !important;
-    background-color: #f8fafc !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 3px !important;
-    box-shadow: 0 0 6px rgba(255, 255, 255, 0.6) !important;
-    z-index: 10;
-  }
-
-  /* 手前の席 (Seat 0): 箱の上フチ（真ん中向き）に配置 */
-  .seat-bottom .riichi-stick {
-    top: -16px !important;
-    bottom: auto !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-  }
-
-  /* 奥の席 (Seat 2): 箱自体が180度反転しているため、箱の上フチ（真ん中向き）に配置 */
-  .seat-top .riichi-stick {
-    top: -16px !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-  }
-
-  /* 左の席 (Seat 3): 箱が90度回転しているため、右フチ（中央向き）に寄せて縦向きに配置 */
-  .seat-left .riichi-stick {
-    top: 50% !important;
-    right: -16px !important;
-    left: auto !important;
-    transform: translateY(-50%) rotate(90deg) !important;
-  }
-
-  /* 右の席 (Seat 1): 箱が-90度回転しているため、左フチ（中央向き）に寄せて縦向きに配置 */
-  .seat-right .riichi-stick {
-    top: 50% !important;
-    left: -16px !important;
-    right: auto !important;
-    transform: translateY(-50%) rotate(90deg) !important;
-  }
-
   .table-center-hub {
     position: absolute;
     top: 50%;
@@ -854,26 +839,4 @@ body {
 #screen-result.hidden,
 #screen-stats.hidden {
   display: none !important;
-}
-
-/* style.css の末尾に追加、または調整 */
-.seat-bottom .riichi-stick {
-  bottom: -15px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-.seat-top .riichi-stick {
-  top: -15px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-.seat-left .riichi-stick {
-  left: -25px;
-  top: 50%;
-  transform: translateY(-50%) rotate(90deg);
-}
-.seat-right .riichi-stick {
-  right: -25px;
-  top: 50%;
-  transform: translateY(-50%) rotate(90deg);
 }

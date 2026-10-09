@@ -896,3 +896,133 @@ body {
   padding: 4px;
   margin-top: 8px;
 }
+
+/* ==========================================================================
+   📱 縦持ち（Portrait）：提案の3ブロック構造 ＆ 下部ボタン固定
+   ========================================================================== */
+@media screen and (orientation: portrait) {
+  #screen-result {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    max-height: 100% !important;
+  }
+  
+  /* 第1ブロック: タイトル */
+  #screen-result .result-title-section {
+    flex-shrink: 0 !important;
+    padding: 12px 0 4px 0 !important;
+  }
+
+  /* 第2・第3ブロックを包むコンテナ */
+  #screen-result .result-content-body {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    justify-content: space-between !important;
+  }
+
+  /* 第2ブロック: 着順テーブル（画面中央で自律スクロール） */
+  #screen-result .result-table-block {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    margin: 8px 4px !important;
+    border-radius: 12px !important;
+  }
+
+  /* 第3ブロック: 下部ボタン3つ（最下部にピッタリ固定） */
+  #screen-result .result-buttons-block {
+    flex-shrink: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+    width: 100% !important;
+  }
+  #screen-result .result-buttons-block .btn {
+    padding: 12px !important;
+    font-size: 15px !important;
+    border-radius: 10px !important;
+  }
+}
+
+/* ==========================================================================
+   💻 横持ち（Landscape）：提案の 上下2ブロック構造（タイトル ➔ 着順＆ボタン）
+   ========================================================================== */
+@media screen and (orientation: landscape) {
+  #screen-result {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    padding: 8px 16px env(safe-area-inset-bottom, 8px) 16px !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 【上段ブロック】：タイトルエリアをすっきり配置 */
+  #screen-result .result-title-section {
+    flex-shrink: 0 !important;
+    padding: 2px 0 !important;
+  }
+  #screen-result .result-title-section .title {
+    font-size: 18px !important;
+  }
+  #screen-result .result-title-section .subtitle {
+    font-size: 10px !important;
+    margin-top: 0px !important;
+  }
+
+  /* 【下段ブロック】：テーブルとボタンを内包し、横並び（2カラム）にするコンテナ */
+  #screen-result .result-content-body {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: row !important; /* 👈 提案通り横並びに変身 */
+    min-height: 0 !important;
+    gap: 16px !important;
+    padding-top: 4px !important;
+  }
+
+  /* 左側：着順テーブル（横画面の低い縦幅に合わせて自動で縮み、スクロール可能に） */
+  #screen-result .result-table-block {
+    flex: 1.2 !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    margin: 0 !important;
+    border-radius: 12px !important;
+  }
+  #screen-result .result-table th, 
+  #screen-result .result-table td {
+    padding: 8px 12px !important; /* 横画面用にテーブルの縦幅を少しスリム化 */
+    font-size: 13px !important;
+  }
+
+  /* 右側：ボタン3つ（全高を活かして、3つのボタンを等間隔に配置） */
+  #screen-result .result-buttons-block {
+    flex: 0.8 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important; /* 縦幅いっぱいにバランスよく広げる */
+    height: 100% !important;
+    gap: 6px !important;
+  }
+
+  /* 横画面用の押しやすく見切れないジャストサイズのボタン調整 */
+  #screen-result .result-buttons-block .btn {
+    width: 100% !important;
+    flex: 1 !important; /* 3つのボタンが縦幅を均等に分け合う */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    padding: 0 !important; /* flex:1 があるためpaddingは0で自動フィット */
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    border-radius: 10px !important;
+  }
+}

@@ -462,37 +462,48 @@
 
 </div>
 
-    <!-- 画面4：着順とポイント画面（変更なし） -->
-    <div id="screen-result" class="screen flex-column justify-between hidden">
-      <div>
-        <header class="text-center py-4 mb-2">
-          <h1 class="title text-sky">対局結果 (精算)</h1>
-          <p class="subtitle">ウマオカ自動計算</p>
-          <button onclick="openCommonLogModal()" class="btn btn-dark" style="width: 100%; margin-bottom: 8px;">📜 この半荘の全ログを確認</button>
-        </header>
-        <div class="card p-0 ml-4 mr-4 mb-4 overflow-hidden">
-          <table class="result-table">
-            <thead>
-              <tr>
-                <th>着順</th>
-                <th>名前</th>
-                <th class="text-right">素点</th>
-                <th class="text-right">ポイント</th>
-              </tr>
-            </thead>
-            <tbody id="result-table-body"></tbody>
-          </table>
-        </div>
-      </div>
-      <div class="space-y-3 pt-4 mb-2">
-        <button onclick="openStats()" class="btn btn-sky">
-          📊 総合成績表を見る
-        </button>
-        <button onclick="nextGame()" class="btn btn-emerald-sub">
-          次の半荘を開始
-        </button>
-      </div>
+<!-- 🏆 提案型：縦3ブロック／横2ブロック完全最適化の結果精算画面 -->
+<div id="screen-result" class="screen flex-column justify-between hidden">
+  
+  <!-- 1️⃣ 【第1ブロック】：タイトルエリア -->
+  <header class="result-title-section text-center">
+    <h1 class="title text-sky">対局結果 (精算)</h1>
+    <p class="subtitle">ウマオカ自動計算</p>
+  </header>
+
+  <!-- 🚨 横画面の時は、ここから下の「テーブル」と「ボタン」が左右2分割の横並び（Flex）に変化します -->
+  <div class="result-content-body">
+    
+    <!-- 2️⃣ 【第2ブロック】：着順テーブル（表） -->
+    <div class="result-table-block card p-0 overflow-hidden">
+      <table class="result-table">
+        <thead>
+          <tr>
+            <th>着順</th>
+            <th>名前</th>
+            <th class="text-right">素点</th>
+            <th class="text-right">ポイント</th>
+          </tr>
+        </thead>
+        <tbody id="result-table-body"></tbody>
+      </table>
     </div>
+
+    <!-- 3️⃣ 【第3ブロック】：ボタン3つの操作エリア（提案通りログ確認を一番上に配置） -->
+    <div class="result-buttons-block">
+      <button onclick="openCommonLogModal()" class="btn btn-dark">
+        📜 この半荘の全ログを確認
+      </button>
+      <button onclick="openStats()" class="btn btn-sky">
+        📊 総合成績表を見る
+      </button>
+      <button onclick="nextGame()" class="btn btn-emerald">
+        次の半荘を開始
+      </button>
+    </div>
+
+  </div>
+</div>
 
     <!-- 画面5：総合成績表（変更なし） -->
     <div id="screen-stats" class="full-modal hidden">

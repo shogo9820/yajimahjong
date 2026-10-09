@@ -953,12 +953,21 @@ body {
    💻 横持ち（Landscape）：提案の 上下2ブロック構造（タイトル ➔ 着順＆ボタン）
    ========================================================================== */
 @media screen and (orientation: landscape) {
+  /* 🏆 完璧版：横画面で結果画面を中央に寄せ、下にしっかり余白を作る設定 */
   #screen-result {
     display: flex !important;
     flex-direction: column !important;
+    
+    /* 🚨 ど真ん中に寄せるための設定 */
     width: 95vw !important;
-    height: 100vh !important;
-    height: 100dvh !important;
+    margin-left: auto !important;   /* 左右オートマージンで */
+    margin-right: auto !important;  /* 画面の水平中央に強制センタリング */
+    
+    /* 🚨 下にしっかり余白を作るための設定 */
+    height: calc(100vh - 16px) !important;   /* 縦幅を100%から少し引いて */
+    height: calc(100dvh - 16px) !important;  /* 下に余白が生まれるスペースを確保 */
+    margin-bottom: 16px !important;          /* 下側にピタッとマージン（余白）を保証 */
+    
     padding: 8px 16px env(safe-area-inset-bottom, 8px) 16px !important;
     overflow: hidden !important;
     box-sizing: border-box !important;

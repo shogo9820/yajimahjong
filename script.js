@@ -1061,7 +1061,7 @@ function executePointTransfer() {
     currentLogObj.tobiPlayer = tobiPlayerName;
     
     if (!appState.matchLogs) appState.matchLogs = [];
-    appState.matchLogs.unshift(currentLogObj); // ログを確定させて保存
+    appState.matchLogs.push(currentLogObj); // ログを確定させて保存
     saveToLocalStorage();
 
     alert(`🚨 【ぶっ飛び終了】\n「${tobiPlayerName}」の持ち点が0点未満（マイナス）になったため、ルールによりゲームを強制終了（コールド）します！`);
@@ -1071,7 +1071,7 @@ function executePointTransfer() {
 
   // 通常のアガリ・終局でも、ログ配列にしっかり保存
   if (!appState.matchLogs) appState.matchLogs = [];
-  appState.matchLogs.unshift(currentLogObj);
+  appState.matchLogs.push(currentLogObj);
 
   // ==========================================================================
   // 3. 親移動・抜け番交代の実行判定（飛びが無かった場合のみ続行）
@@ -1332,30 +1332,29 @@ function declareRiichi(pId) {
   saveToLocalStorage();
 }
 
-// 📜 共通ログモーダルを開く
+// 📜 共通ログモーダルを開く（常に一番下を表示する調整版）
 function openCommonLogModal() {
   const modal = document.getElementById("common-log-modal");
   const listArea = document.getElementById("modal-log-list-area");
   if (!modal || !listArea) return;
 
   if (!appState.matchLogs || appState.matchLogs.length === 0) {
-    listArea.innerHTML = '<div style="color: #64748b; text-align: center; padding-top: 40px; font-size: 14px;">まだこの半荘の精算履歴はありません。</div>';
+    listArea.innerHTML = '<div style="color: #64748b; text-align: center; padding-top: 40px; font-size: 14px;">まだこの半荘の精戦履歴はありません。</div>';
   } else {
-    // 溜まっている構造化ログデータをループして綺麗な等幅テキスト形式で出力
+    // 溜まっている構造化ログデータを時系列（下に追加）のままループ出力
     listArea.innerHTML = appState.matchLogs.map(log => {
       let rowsHtml = log.rows.map(r => {
         const ptClass = r.pt >= 0 ? "log-pt-plus" : "log-pt-minus";
         const ptSign = r.pt > 0 ? "+" : "";
         return `
           <div class="log-action-row">
-            <span class="log-action-type" style="color:${r.type === '放銃' ? '#94a3b8' : '#cbd5e1'};">${r.type}</span>
+            <span class="log-action-type" style="color:${r.type === '放銃　　' ? '#94a3b8' : '#cbd5e1'};">${r.type}</span>
             <span class="log-player-name">${r.name}</span>
             <span class="${ptClass}">${ptSign}${r.pt.toLocaleString()}</span>
           </div>
         `;
       }).join('');
 
-      // もしこの局でトビ終了が発生していたら、最下部に警告バッジを載せる
       let tobiHtml = log.isTobiEnd ? `<div class="log-status-tobi">🚨 ぶっ飛び：${log.tobiPlayer}のマイナスによりコールド終局</div>` : '';
 
       return `
@@ -1369,6 +1368,11 @@ function openCommonLogModal() {
   }
 
   modal.classList.remove("hidden");
+
+  // 🚨 ログが下に追加されていくため、開いた瞬間に自動で一番下まで強制スクロールさせる
+  setTimeout(() => {
+    listArea.scrollTop = listArea.scrollHeight;
+  }, 10);
 }
 
 // 📜 共通ログモーダルを閉じる

@@ -871,7 +871,7 @@ function clearRoleSlots() {
   setAgariType("ron");
 }
 
-// 🀄 対局結果の点数授受・符計算・本場加算・親移動の実行関数（麻雀正式ルール完全準拠版）
+// 🀄 対局結果の点数授受・符計算・本場・【モーダル用構造化ログ & トビA】完全連動関数
 function executePointTransfer() {
   if (matchCalcState.type !== "tenpai" && matchCalcState.winners.length === 0) {
     alert("和了者(アガリ)を設定してください");
@@ -882,13 +882,20 @@ function executePointTransfer() {
     return;
   }
 
-  const currentOyaId = appState.activePlayers[0]; // 現在の東家（親）のプレイヤーID
-  let isRenchan = false;                         // 親が連荘するかどうかのフラグ
+  const currentOyaId = appState.activePlayers[0];
+  let isRenchan = false;
   
-  // 今回の精算前の本場数を保持（計算用）
   const currentHonba = appState.honbaCount;
-  const honbaRonValue = currentHonba * 300;      // ロン時の本場代（300点）
-  const honbaTsumoValue = currentHonba * 100;    // ツモ時の各家支払う本場代（100点）
+  const honbaRonValue = currentHonba * 300;
+  const honbaTsumoValue = currentHonba * 100;
+
+  // 🚨 新しいログ格納用のオブジェクト構造（ご提示いただいたフォーマットで描画するための設計）
+  let currentLogObj = {
+    title: `${(appState.currentWind === 0 ? "東" : "南")}${appState.currentKyoku}局　${currentHonba}本場`,
+    rows: [],
+    isTobiEnd: false,
+    tobiPlayer: ""
+  };
 
   // ==========================================================================
   // ケース A：流局（テンパイ実行）の場合
@@ -898,7 +905,6 @@ function executePointTransfer() {
     const allActive = appState.activePlayers;
     const noTenCount = allActive.length - tenpaiCount;
 
-    // テンパイとノーテンが混在している場合のみノーテン罰符（3000点）の授受
     if (tenpaiCount > 0 && noTenCount > 0) {
       let plusScore = 0;
       let minusScore = 0;
@@ -909,20 +915,25 @@ function executePointTransfer() {
       allActive.forEach((pId) => {
         if (matchCalcState.winners.includes(pId)) {
           appState.currentPoints[pId] += plusScore;
+          currentLogObj.rows.push({ type: "荒牌　　", name: getPlayerName(pId), pt: plusScore });
         } else {
           appState.currentPoints[pId] -= minusScore;
+          currentLogObj.rows.push({ type: "　　　　", name: getPlayerName(pId), pt: -minusScore });
         }
+      });
+    } else {
+      // 全員ノーテンまたは全員テンパイで点数移動がない場合
+      allActive.forEach((pId) => {
+        currentLogObj.rows.push({ type: "荒牌　　", name: getPlayerName(pId), pt: 0 });
       });
     }
 
-    // 💡 流局時の連荘条件：親がテンパイ（winnersに含まれる）していれば連荘
     if (matchCalcState.winners.includes(currentOyaId)) {
       isRenchan = true;
     } else {
-      isRenchan = false; // 親がノーテンなら流局なので親流れ
+      isRenchan = false;
     }
 
-    // 流局時は全員ノーテンでもテンパイでも、本場は「必ずプラス1」
     appState.honbaCount += 1;
     alert(`流局精算を完了しました（本場を+1します。現在の本場: ${appState.honbaCount}本場）`);
 
@@ -931,7 +942,7 @@ function executePointTransfer() {
   // ==========================================================================
   } else {
     const winnerId = matchCalcState.winners[0];
-    const isWinnerOya = (currentOyaId === winnerId); // アガったのが親かどうか
+    const isWinnerOya = (currentOyaId === winnerId);
     
     let pointsWinnerGets = 0;
     let pointsOyaPays = 0;
@@ -946,110 +957,132 @@ function executePointTransfer() {
       if (matchCalcState.scale === "yakuman") pointsWinnerGets = isWinnerOya ? 48000 : 32000;
 
       if (matchCalcState.type === "tsumo") {
-        if (isWinnerOya) {
-          pointsKoPays = pointsWinnerGets / (appState.tableSize - 1);
-        } else {
-          pointsOyaPays = pointsWinnerGets / 2;
-          pointsKoPays = pointsWinnerGets / 4;
-        }
+        if (isWinnerOya) pointsKoPays = pointsWinnerGets / (appState.tableSize - 1);
+        else { pointsOyaPays = pointsWinnerGets / 2; pointsKoPays = pointsWinnerGets / 4; }
       }
     }
-    // 2. 🚨 【符計算導入】満貫未満の麻雀正式な切り上げ数式計算
+    // 2. 符計算を含む満貫未満の点数計算
     else {
       const hanEl = document.getElementById("select-han");
-      const fuEl = document.getElementById("select-fu"); // HTMLの符数セレクトボックス
-      
+      const fuEl = document.getElementById("select-fu");
       const han = hanEl ? parseInt(hanEl.value) : 1;
-      const fu = fuEl ? parseInt(fuEl.value) : 30; // 取得できない場合のデフォルトは30符
+      const fu = fuEl ? parseInt(fuEl.value) : 30;
 
-      // 満貫の境界線チェック（3翻60符以上、または4翻30符以上、または5翻は一律で「満貫」）
       if ((han === 3 && fu >= 60) || (han === 4 && fu >= 30) || han >= 5) {
         pointsWinnerGets = isWinnerOya ? 12000 : 8000;
         if (matchCalcState.type === "tsumo") {
-          if (isWinnerOya) {
-            pointsKoPays = pointsWinnerGets / (appState.tableSize - 1);
-          } else {
-            pointsOyaPays = pointsWinnerGets / 2;
-            pointsKoPays = pointsWinnerGets / 4;
-          }
+          if (isWinnerOya) pointsKoPays = pointsWinnerGets / (appState.tableSize - 1);
+          else { pointsOyaPays = pointsWinnerGets / 2; pointsKoPays = pointsWinnerGets / 4; }
         }
-      } 
-      // 満貫未満の場合：基本点（符 × 2の(翻+2)乗）をベースに計算
-      else {
+      } else {
         const baseScore = fu * Math.pow(2, han + 2);
-        
         if (matchCalcState.type === "ron") {
-          // ロン和了：親は基本点の6倍、子は4倍（100点単位切り上げ）
           const rawScore = isWinnerOya ? (baseScore * 6) : (baseScore * 4);
           pointsWinnerGets = Math.ceil(rawScore / 100) * 100;
         } else {
-          // ツモ和了：各々の支払いを100点単位で切り上げて合計する
           if (isWinnerOya) {
-            // 親のツモ：子は基本点の2倍を支払う
             pointsKoPays = Math.ceil((baseScore * 2) / 100) * 100;
             pointsWinnerGets = pointsKoPays * (appState.tableSize - 1);
           } else {
-            // 子のツモ：親は4倍、子は2倍を支払う
             pointsOyaPays = Math.ceil((baseScore * 4) / 100) * 100;
             pointsKoPays = Math.ceil((baseScore * 2) / 100) * 100;
-            pointsWinnerGets = pointsOyaPays + (pointsKoPays * (appState.tableSize - 1 - (appState.tableSize === 3 ? 0 : 0))); // サンマ・ヨンマの卓サイズ自動対応支払額
+            pointsWinnerGets = pointsOyaPays + (pointsKoPays * (appState.tableSize - 1 - (appState.tableSize === 3 ? 1 : 0)));
           }
         }
       }
     }
 
-    // 3. 実際の点数移動（基本点 ＋ 本場代の加算授受）
+    // 3. 実際の点数移動の実行（基本点 ＋ 本場代の加算授受）
     if (matchCalcState.type === "ron") {
-      // ロン和了：放銃者から「基本点 ＋ 本場×300点」を全額徴収
-      appState.currentPoints[winnerId] += (pointsWinnerGets + honbaRonValue);
-      appState.currentPoints[matchCalcState.loser] -= (pointsWinnerGets + honbaRonValue);
-    } else {
-      // ツモ和了：アガリ者に「基本点 ＋ 各家からの本場代総額（1人100点）」を加算
-      appState.currentPoints[winnerId] += pointsWinnerGets + ((appState.tableSize - 1) * honbaTsumoValue);
+      const finalGet = pointsWinnerGets + honbaRonValue;
+      appState.currentPoints[winnerId] += finalGet;
+      appState.currentPoints[matchCalcState.loser] -= finalGet;
       
-      // 他の active プレイヤー（子・親）から減算
+      // 🚨 ご指定の美しい表示形式に完全に揃えます
+      currentLogObj.rows.push({ type: "ロン和　", name: getPlayerName(winnerId), pt: finalGet });
+      currentLogObj.rows.push({ type: "放銃　　", name: getPlayerName(matchCalcState.loser), pt: -finalGet });
+    } else {
+      const finalGet = pointsWinnerGets + ((appState.tableSize - 1) * honbaTsumoValue);
+      appState.currentPoints[winnerId] += finalGet;
+      
+      currentLogObj.rows.push({ type: "ツモ和　", name: getPlayerName(winnerId), pt: finalGet });
+
       appState.activePlayers.forEach((pId) => {
         if (pId === winnerId) return;
         if (currentOyaId === pId) {
-          // 親が支払う分（基本支払い ＋ 本場×100点）
-          appState.currentPoints[pId] -= (pointsOyaPays + honbaTsumoValue);
+          const loss = pointsOyaPays + honbaTsumoValue;
+          appState.currentPoints[pId] -= loss;
+          currentLogObj.rows.push({ type: "　　　　", name: getPlayerName(pId), pt: -loss });
         } else {
-          // 子が支払う分（基本支払い ＋ 本場×100点）
-          appState.currentPoints[pId] -= (pointsKoPays + honbaTsumoValue);
+          const loss = pointsKoPays + honbaTsumoValue;
+          appState.currentPoints[pId] -= loss;
+          currentLogObj.rows.push({ type: "　　　　", name: getPlayerName(pId), pt: -loss });
         }
       });
     }
 
-    // 4. 卓上にたまっている供託立直棒（1本1000点）をアガリ者が総取り
+    // 卓上にたまっている供託立直棒の回収
     if (appState.kyotakuCount > 0) {
       appState.currentPoints[winnerId] += appState.kyotakuCount * 1000;
-      appState.kyotakuCount = 0; // 供託をゼロにリセット
+      currentLogObj.rows.push({ type: "供託回収", name: getPlayerName(winnerId), pt: appState.kyotakuCount * 1000 });
+      appState.kyotakuCount = 0;
     }
     
-    // 5. アガリ発生時の本場・連荘条件の判定
     if (isWinnerOya) {
       isRenchan = true;
-      appState.honbaCount += 1; // 親のアガリなので本場をプラス1
+      appState.honbaCount += 1;
       alert(`親の和了です！本場を+1します。（現在の本場: ${appState.honbaCount}本場）`);
     } else {
       isRenchan = false;
-      appState.honbaCount = 0;  // 子のアガリなので本場は「0」にリセット
+      appState.honbaCount = 0;
       alert("子のアガリです。本場を0にリセットします。");
     }
   }
 
   // ==========================================================================
-  // 3. 親移動・抜け番（4人3打ち）交代の実行判定
+  // 🚨 仕様A：トビ（ぶっ飛び）ルールの判定処理
+  // ==========================================================================
+  const tobiRuleEl = document.getElementById("rule-tobi");
+  const tobiRule = tobiRuleEl ? tobiRuleEl.value : "ari";
+  
+  let hasTobiPlayer = false;
+  let tobiPlayerName = "";
+  
+  appState.activePlayers.forEach((pId) => {
+    if (appState.currentPoints[pId] < 0) {
+      hasTobiPlayer = true;
+      tobiPlayerName = getPlayerName(pId);
+    }
+  });
+
+  // 🚨 最後に飛んだ場合も確実にログオブジェクトに記録を刻みつける
+  if (tobiRule === "ari" && hasTobiPlayer) {
+    currentLogObj.isTobiEnd = true;
+    currentLogObj.tobiPlayer = tobiPlayerName;
+    
+    if (!appState.matchLogs) appState.matchLogs = [];
+    appState.matchLogs.unshift(currentLogObj); // ログを確定させて保存
+    saveToLocalStorage();
+
+    alert(`🚨 【ぶっ飛び終了】\n「${tobiPlayerName}」の持ち点が0点未満（マイナス）になったため、ルールによりゲームを強制終了（コールド）します！`);
+    endMatch(); 
+    return;     
+  }
+
+  // 通常のアガリ・終局でも、ログ配列にしっかり保存
+  if (!appState.matchLogs) appState.matchLogs = [];
+  appState.matchLogs.unshift(currentLogObj);
+
+  // ==========================================================================
+  // 3. 親移動・抜け番交代の実行判定（飛びが無かった場合のみ続行）
   // ==========================================================================
   if (isRenchan) {
     alert("親の連荘です！次局も同じ親で続行します。");
   } else {
-    // 親が流れた場合の処理
     const modeSelect = document.getElementById("game-mode-select");
     const modeVal = modeSelect ? modeSelect.value : "4";
     
     if (modeVal === "4-3打ち") {
-      // 4人3打ち時のローテーション処理
       const oldOya = appState.activePlayers.shift();
       appState.activePlayers.push(appState.subPlayer);
       appState.subPlayer = oldOya;
@@ -1058,9 +1091,8 @@ function executePointTransfer() {
         appState.currentKyoku = 1;
         appState.currentWind += 1;
       }
-      alert(`親流れ交代:「${getPlayerName(oldOya)}」が控えへ、お休みの「${getPlayerName(appState.activePlayers[2])}」が次局から参戦します！`);
+      alert(`親流れ交代:「${getPlayerName(oldOya)}」が控えへ、お休みの「${getPlayerName(appState.activePlayers)}」が参戦します！`);
     } else {
-      // 通常の親移動（席順を1つずらす）
       const shiftedPlayer = appState.activePlayers.shift();
       appState.activePlayers.push(shiftedPlayer);
       appState.currentKyoku += 1;
@@ -1073,12 +1105,11 @@ function executePointTransfer() {
     }
   }
 
-  // 次局へ向けた画面・状態の初期化と保存
-  appState.riichiPlayers = []; // 立直状態を全員解除
-  updateUIKyokuDisplay();      // 修正された本場数・供託を画面に一括反映
-  refreshMatchPlayerList();    // 卓上の点数や立直棒表示をリフレッシュ
-  clearRoleSlots();            // 精算パネルのドラッグ枠をクリア
-  saveToLocalStorage();        // 状態をブラウザに自動保存
+  appState.riichiPlayers = [];
+  updateUIKyokuDisplay();
+  refreshMatchPlayerList();
+  clearRoleSlots();
+  saveToLocalStorage();
 }
 
 // 縦画面・横画面どちらのサイコロボタンを押してもエラーを出さずにリアルタイム同期する関数
@@ -1251,58 +1282,97 @@ function resetAllAppStorageData() {
   }
 }
 
-// 🀄 立直ボタンが押されたときの処理（完全統合版：引数は pId で統一）
+// 🀄 立直ボタンが押されたときの処理（仕様A：ちょうど0点セーフ完全対応版）
 function declareRiichi(pId) {
-  // 数値計算用に型を確実に数値に変換
   pId = parseInt(pId);
 
-  // 1. すでに立直している場合は重複処理をしない
+  // すでに立直している場合は重複処理をしない
   if (appState.riichiPlayers.includes(pId)) {
     alert(`${getPlayerName(pId)} はすでに立直しています。`);
     return;
   }
   
-  // 2. 持ち点チェック
+  // 🚨 仕様Aに合わせたチェック：0点未満（マイナス）にはならない「ちょうど1,000点」なら立直可能にする
   if (appState.currentPoints[pId] < 1000) {
-    alert("持ち点が1,000点未満のため立直できません");
+    alert("持ち点が1,000点未満のため立直できません（仕様Aにより1,000点あれば立直して0点続行が可能です）");
     return;
   }
 
-  // 3. 内部データ計算（1000点マイナスと供託の加算）
+  // 内部データ計算（1000点マイナスして供託へ）
   appState.currentPoints[pId] -= 1000;
   appState.kyotakuCount += 1;
   appState.riichiPlayers.push(pId);
 
-  // 4. 📱 縦画面側のリストに「立直中」のクラスを付与
+  // 📱 縦画面側の見た目を更新
   const rowEl = document.getElementById(`match-row-${pId}`);
   if (rowEl) rowEl.classList.add("is-riichi");
 
-  // 5. 💻 横画面側のあらかじめHTMLに置いてある立直棒を「表示」にする
+  // 💻 横画面側の最初から仕込んである赤丸付きの立直棒を「表示」にする
   LANDSCAPE_SEAT_IDS.forEach((seatId, physicalIndex) => {
-    // 4人3打ちの控えプレイヤーの場合は除外
     if (appState.tableSize === 3 && physicalIndex === 3 && document.getElementById("game-mode-select").value === "4-3打ち") {
       return; 
     }
-
     const currentPlayerId = appState.activePlayers[physicalIndex];
     if (currentPlayerId === pId) {
       const seatEl = document.getElementById(seatId);
       const stick = seatEl ? seatEl.querySelector(".riichi-stick") : null;
-      if (stick) {
-        stick.classList.remove("hidden"); // 最初から仕込んである赤丸付きの棒を出す
-      }
+      if (stick) stick.classList.remove("hidden");
     }
   });
 
-  // 6. 🔢 点数入力フォームの数値を最新の点数（-1000点された値）に同期
+  // 点数入力フォームの数値を同期
   const inputScore = document.getElementById(`match-pt-${pId}`);
   if (inputScore) inputScore.value = appState.currentPoints[pId];
 
-  // 7. 👑 上部ヘッダーの「供託・本場バッジ」をリアルタイム更新
+  // 👑 上部ヘッダーの「供託・本場バッジ」やハブの同期
   if (typeof updateUIKyokuDisplay === "function") {
     updateUIKyokuDisplay();
   }
 
-  // 8. 💾 状態をローカルストレージに保存
   saveToLocalStorage();
+}
+
+// 📜 共通ログモーダルを開く
+function openCommonLogModal() {
+  const modal = document.getElementById("common-log-modal");
+  const listArea = document.getElementById("modal-log-list-area");
+  if (!modal || !listArea) return;
+
+  if (!appState.matchLogs || appState.matchLogs.length === 0) {
+    listArea.innerHTML = '<div style="color: #64748b; text-align: center; padding-top: 40px; font-size: 14px;">まだこの半荘の精算履歴はありません。</div>';
+  } else {
+    // 溜まっている構造化ログデータをループして綺麗な等幅テキスト形式で出力
+    listArea.innerHTML = appState.matchLogs.map(log => {
+      let rowsHtml = log.rows.map(r => {
+        const ptClass = r.pt >= 0 ? "log-pt-plus" : "log-pt-minus";
+        const ptSign = r.pt > 0 ? "+" : "";
+        return `
+          <div class="log-action-row">
+            <span class="log-action-type" style="color:${r.type === '放銃' ? '#94a3b8' : '#cbd5e1'};">${r.type}</span>
+            <span class="log-player-name">${r.name}</span>
+            <span class="${ptClass}">${ptSign}${r.pt.toLocaleString()}</span>
+          </div>
+        `;
+      }).join('');
+
+      // もしこの局でトビ終了が発生していたら、最下部に警告バッジを載せる
+      let tobiHtml = log.isTobiEnd ? `<div class="log-status-tobi">🚨 ぶっ飛び：${log.tobiPlayer}のマイナスによりコールド終局</div>` : '';
+
+      return `
+        <div class="log-block">
+          <div class="log-title-row">${log.title}</div>
+          ${rowsHtml}
+          ${tobiHtml}
+        </div>
+      `;
+    }).join('');
+  }
+
+  modal.classList.remove("hidden");
+}
+
+// 📜 共通ログモーダルを閉じる
+function closeCommonLogModal() {
+  const modal = document.getElementById("common-log-modal");
+  if (modal) modal.classList.add("hidden");
 }

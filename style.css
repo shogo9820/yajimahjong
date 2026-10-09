@@ -840,3 +840,53 @@ body {
 #screen-stats.hidden {
   display: none !important;
 }
+
+/* ==========================================================================
+   📜 構造化対局ログ（等幅＆綺麗に整列する麻雀ゲーム風デザイン）
+   ========================================================================== */
+.log-block {
+  background-color: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", monospace;
+}
+.log-title-row {
+  font-size: 14px;
+  font-weight: 900;
+  color: #fbbf24; /* 黄色文字で 局数・本場 */
+  border-bottom: 1px solid rgba(51, 65, 85, 0.6);
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+}
+.log-action-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre; /* 空白スペース（全角スペース等）をそのまま等幅表示に活かす */
+}
+.log-action-type {
+  font-weight: bold;
+  min-width: 60px;
+}
+.log-player-name {
+  color: #e2e8f0;
+  flex: 1;
+  padding-left: 8px;
+}
+.log-pt-plus { color: #34d399; font-weight: bold; font-family: monospace; }
+.log-pt-minus { color: #f43f5e; font-weight: bold; font-family: monospace; }
+.log-status-tobi {
+  color: #f43f5e;
+  background-color: rgba(244, 63, 94, 0.1);
+  border: 1px dashed #f43f5e;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 4px;
+  margin-top: 8px;
+}

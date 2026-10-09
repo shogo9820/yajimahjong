@@ -182,6 +182,13 @@
               </select>
             </div>
             <div class="table-row-flex">
+              <span>トビルール</span>
+              <select id="rule-tobi" class="inline-select">
+                <option value="ari" selected>あり（マイナスで即終了）</option>
+                <option value="nashi">なし（マイナスでも続行）</option>
+              </select>
+            </div>
+            <div class="table-row-flex">
               <span>喰いタン/後付け</span>
               <select id="rule-kuitan" class="inline-select">
                 <option value="ariari" selected>ありあり</option>
@@ -242,6 +249,7 @@
             <span id="current-honba" class="badge-honba">0 本場</span>
             <span id="current-kyotaku" class="badge-kyotaku">供託 0本</span>
           </div>
+          <button onclick="openCommonLogModal()" class="btn btn-dark-sub" style="width: 100%; margin-top: 8px;">📜 対局ログ履歴を見る</button>
           <button onclick="endMatch()" class="btn-end-header">終局</button>
         </div>
         <div class="flex justify-between items-center mt-2 pt-2 border-top">
@@ -296,15 +304,6 @@
         <!-- 翻・符セレクト -->
         <div id="panel-detail-box" class="flex gap-2">
           <div class="flex-1">
-            <span class="input-label-sm">【翻】</span>
-            <select id="select-han" class="inline-select-sm w-full">
-              <option value="1">1翻</option>
-              <option value="2">2翻</option>
-              <option value="3">3翻</option>
-              <option value="4">4翻</option>
-            </select>
-          </div>
-          <div class="flex-1">
             <span class="input-label-sm">【符】</span>
             <select id="select-fu" class="inline-select-sm w-full">
               <option value="20">20符（ピンフツモなど）</option>
@@ -315,6 +314,15 @@
               <option value="60">60符</option>
               <option value="70">70符</option>
               <option value="85">80符以上</option>
+            </select>
+          </div>
+          <div class="flex-1">
+            <span class="input-label-sm">【翻】</span>
+            <select id="select-han" class="inline-select-sm w-full">
+              <option value="1">1翻</option>
+              <option value="2">2翻</option>
+              <option value="3">3翻</option>
+              <option value="4">4翻</option>
             </select>
           </div>
         </div>
@@ -352,6 +360,7 @@
     <div class="table-center-hub">
       <div id="ls-center-round" class="center-round">東 1 局</div>
       <div id="ls-center-honba" class="center-honba">0 本場</div>
+      <button onclick="openCommonLogModal()" class="btn btn-dark-sub" style="width: 100%; margin-top: 8px;">📜 対局ログ履歴を見る</button>
     </div>
     
     <!-- 右の席（下家：-90度回転） -->
@@ -456,6 +465,7 @@
         <header class="text-center py-4 mb-2">
           <h1 class="title text-sky">対局結果 (精算)</h1>
           <p class="subtitle">ウマオカ自動計算</p>
+          <button onclick="openCommonLogModal()" class="btn btn-dark" style="width: 100%; margin-bottom: 8px;">📜 この半荘の全ログを確認</button>
         </header>
         <div class="card p-0 mb-4 overflow-hidden">
           <table class="result-table">
@@ -507,6 +517,17 @@
         </button>
       </div>
     </div>
+    <!-- 📜 縦横・結果画面で使い回す共通の全画面ログモーダル -->
+<div id="common-log-modal" class="full-modal hidden" style="z-index: 100; background-color: #0f172a; padding: 16px;">
+  <div class="flex justify-between items-center border-bottom mb-3" style="padding-bottom: 12px;">
+    <span class="title text-emerald" style="font-size: 20px;">🀄 対局精算ログ履歴</span>
+    <button onclick="closeCommonLogModal()" class="btn-clear" style="padding: 6px 16px; font-size: 14px; background-color: #334155;">閉じる</button>
+  </div>
+  <!-- ログの中身が並ぶスクロールボックス -->
+  <div id="modal-log-list-area" style="flex: 1; overflow-y: auto; padding-right: 4px;">
+    <!-- ここにJavaScriptで構造化されたログが流し込まれます -->
+  </div>
+</div>
 
     <script src="script.js"></script>
   </body>

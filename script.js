@@ -517,20 +517,54 @@ function startMatch() {
 
 function updateUIKyokuDisplay() {
   const roundStr = (appState.currentWind === 0 ? "東" : "南") + appState.currentKyoku + "局";
-  
-  const wLabel = document.getElementById("current-wind-label");
-  const kNum = document.getElementById("current-kyoku-num");
-  const honba = document.getElementById("current-honba");
-  const kyotaku = document.getElementById("current-kyotaku");
-  if (wLabel) wLabel.innerText = appState.currentWind === 0 ? "東" : "南";
-  if (kNum) kNum.innerText = appState.currentKyoku;
-  if (honba) honba.innerText = `${appState.honbaCount} 本場`;
-  if (kyotaku) kyotaku.innerText = `供託 ${appState.kyotakuCount}本`;
+  const oyaWind = appState.currentWind === 0 ? "東" : "南";
+  const honbaStr = `${appState.honbaCount} 本場`;
+  const kyotakuStr = `供託 ${appState.kyotakuCount}本`;
 
-  const hubRound = document.getElementById("ls-hub-round");
-  const hubHonba = document.getElementById("ls-hub-honba");
-  if (hubRound) hubRound.innerText = roundStr;
-  if (hubHonba) hubHonba.innerText = `${appState.honbaCount}本場 / 供託${appState.kyotakuCount}本`;
+  // 1. 🀄 局数（東南の文字）のディスプレイIDを並べて書き換え
+  ["current-wind-label", "ls-wind-label"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerText = oyaWind;
+  });
+
+  // 🚨 局数の数字（1局など）のディスプレイIDを並べて書き換え
+  ["current-kyoku-num", "ls-kyoku-num"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerText = appState.currentKyoku;
+  });
+
+
+  // 2. 🀄 本場表示のディスプレイIDを並べて書き換え
+  // 縦画面（current-honba）と、横画面ヘッダー（ls-honba）を一気に更新
+  ["current-honba", "ls-honba"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      // 横画面のヘッダーバッジ用に綺麗に「〇本場」の形式で流し込みます
+      el.innerText = (id === "ls-honba") ? `${appState.honbaCount}本場` : honbaStr;
+    }
+  });
+
+
+  // 3. 🀄 供託表示のディスプレイIDを並べて書き換え
+  // 縦画面（current-kyotaku）と、横画面ヘッダー（ls-kyotaku）を一気に更新
+  ["current-kyotaku", "ls-kyotaku"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerText = kyotakuStr;
+  });
+
+
+  // 4. 🎯【今回のバグ修正の核心】横画面の卓の真ん中（中央ハブ）をピンポイント更新
+  // 教えていただいた本物のID「ls-center-round」と「ls-center-honba」をここで直接書き換えます！
+  const hubRound = document.getElementById("ls-center-round");
+  const hubHonba = document.getElementById("ls-center-honba");
+  
+  if (hubRound) {
+    hubRound.innerText = roundStr; // 例：「東1局」
+  }
+  if (hubHonba) {
+    // 卓の真ん中でパッと見て一番わかりやすい「〇本場 / 供託〇本」の合体形式で美しく表示します
+    hubHonba.innerText = `${appState.honbaCount}本場 / 供託${appState.kyotakuCount}本`;
+  }
 }
 
 // 対局画面の更新（立直棒のHTML生成＆4人3打ち完全対応版）

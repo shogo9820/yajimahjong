@@ -871,6 +871,7 @@ function clearRoleSlots() {
   setAgariType("ron");
 }
 
+// 🀄 対局結果の点数授受・符計算・本場加算・親移動の実行関数（麻雀正式ルール完全準拠版）
 function executePointTransfer() {
   if (matchCalcState.type !== "tenpai" && matchCalcState.winners.length === 0) {
     alert("和了者(アガリ)を設定してください");
@@ -881,14 +882,23 @@ function executePointTransfer() {
     return;
   }
 
-  const currentOyaId = appState.activePlayers[0];
-  let isRenchan = false;
+  const currentOyaId = appState.activePlayers[0]; // 現在の東家（親）のプレイヤーID
+  let isRenchan = false;                         // 親が連荘するかどうかのフラグ
+  
+  // 今回の精算前の本場数を保持（計算用）
+  const currentHonba = appState.honbaCount;
+  const honbaRonValue = currentHonba * 300;      // ロン時の本場代（300点）
+  const honbaTsumoValue = currentHonba * 100;    // ツモ時の各家支払う本場代（100点）
 
+  // ==========================================================================
+  // ケース A：流局（テンパイ実行）の場合
+  // ==========================================================================
   if (matchCalcState.type === "tenpai") {
     const tenpaiCount = matchCalcState.winners.length;
     const allActive = appState.activePlayers;
     const noTenCount = allActive.length - tenpaiCount;
 
+    // テンパイとノーテンが混在している場合のみノーテン罰符（3000点）の授受
     if (tenpaiCount > 0 && noTenCount > 0) {
       let plusScore = 0;
       let minusScore = 0;
@@ -904,18 +914,30 @@ function executePointTransfer() {
         }
       });
     }
+
+    // 💡 流局時の連荘条件：親がテンパイ（winnersに含まれる）していれば連荘
     if (matchCalcState.winners.includes(currentOyaId)) {
       isRenchan = true;
+    } else {
+      isRenchan = false; // 親がノーテンなら流局なので親流れ
     }
+
+    // 流局時は全員ノーテンでもテンパイでも、本場は「必ずプラス1」
     appState.honbaCount += 1;
-    alert(`流局精算を完了しました（テンパイ: ${tenpaiCount}人）`);
+    alert(`流局精算を完了しました（本場を+1します。現在の本場: ${appState.honbaCount}本場）`);
+
+  // ==========================================================================
+  // ケース B：誰かが和了（アガリ）した場合
+  // ==========================================================================
   } else {
     const winnerId = matchCalcState.winners[0];
-    const isWinnerOya = currentOyaId === winnerId;
+    const isWinnerOya = (currentOyaId === winnerId); // アガったのが親かどうか
+    
     let pointsWinnerGets = 0;
     let pointsOyaPays = 0;
     let pointsKoPays = 0;
 
+    // 1. 満貫以上の固定点数計算
     if (matchCalcState.scale) {
       if (matchCalcState.scale === "mangan") pointsWinnerGets = isWinnerOya ? 12000 : 8000;
       if (matchCalcState.scale === "hanman") pointsWinnerGets = isWinnerOya ? 18000 : 12000;
@@ -932,63 +954,102 @@ function executePointTransfer() {
         }
       }
     }
+    // 2. 🚨 【符計算導入】満貫未満の麻雀正式な切り上げ数式計算
     else {
       const hanEl = document.getElementById("select-han");
+      const fuEl = document.getElementById("select-fu"); // HTMLの符数セレクトボックス
+      
       const han = hanEl ? parseInt(hanEl.value) : 1;
-      if (han === 1) pointsWinnerGets = isWinnerOya ? 1500 : 1000;
-      if (han === 2) pointsWinnerGets = isWinnerOya ? 2900 : 2000;
-      if (han === 3) pointsWinnerGets = isWinnerOya ? 5800 : 3900;
-      if (han === 4) pointsWinnerGets = isWinnerOya ? 11600 : 7700;
+      const fu = fuEl ? parseInt(fuEl.value) : 30; // 取得できない場合のデフォルトは30符
 
-      if (matchCalcState.type === "tsumo") {
-        if (isWinnerOya) {
-          pointsKoPays = Math.ceil((pointsWinnerGets / (appState.tableSize - 1)) / 100) * 100;
+      // 満貫の境界線チェック（3翻60符以上、または4翻30符以上、または5翻は一律で「満貫」）
+      if ((han === 3 && fu >= 60) || (han === 4 && fu >= 30) || han >= 5) {
+        pointsWinnerGets = isWinnerOya ? 12000 : 8000;
+        if (matchCalcState.type === "tsumo") {
+          if (isWinnerOya) {
+            pointsKoPays = pointsWinnerGets / (appState.tableSize - 1);
+          } else {
+            pointsOyaPays = pointsWinnerGets / 2;
+            pointsKoPays = pointsWinnerGets / 4;
+          }
+        }
+      } 
+      // 満貫未満の場合：基本点（符 × 2の(翻+2)乗）をベースに計算
+      else {
+        const baseScore = fu * Math.pow(2, han + 2);
+        
+        if (matchCalcState.type === "ron") {
+          // ロン和了：親は基本点の6倍、子は4倍（100点単位切り上げ）
+          const rawScore = isWinnerOya ? (baseScore * 6) : (baseScore * 4);
+          pointsWinnerGets = Math.ceil(rawScore / 100) * 100;
         } else {
-          pointsOyaPays = Math.ceil((pointsWinnerGets / 2) / 100) * 100;
-          pointsKoPays = Math.ceil((pointsWinnerGets / 4) / 100) * 100;
+          // ツモ和了：各々の支払いを100点単位で切り上げて合計する
+          if (isWinnerOya) {
+            // 親のツモ：子は基本点の2倍を支払う
+            pointsKoPays = Math.ceil((baseScore * 2) / 100) * 100;
+            pointsWinnerGets = pointsKoPays * (appState.tableSize - 1);
+          } else {
+            // 子のツモ：親は4倍、子は2倍を支払う
+            pointsOyaPays = Math.ceil((baseScore * 4) / 100) * 100;
+            pointsKoPays = Math.ceil((baseScore * 2) / 100) * 100;
+            pointsWinnerGets = pointsOyaPays + (pointsKoPays * (appState.tableSize - 1 - (appState.tableSize === 3 ? 0 : 0))); // サンマ・ヨンマの卓サイズ自動対応支払額
+          }
         }
       }
     }
 
-    const honbaValue = appState.honbaCount * 300;
-    const honbaTsumoValue = appState.honbaCount * 100;
-
+    // 3. 実際の点数移動（基本点 ＋ 本場代の加算授受）
     if (matchCalcState.type === "ron") {
-      appState.currentPoints[winnerId] += pointsWinnerGets + honbaValue;
-      appState.currentPoints[matchCalcState.loser] -= (pointsWinnerGets + honbaValue);
+      // ロン和了：放銃者から「基本点 ＋ 本場×300点」を全額徴収
+      appState.currentPoints[winnerId] += (pointsWinnerGets + honbaRonValue);
+      appState.currentPoints[matchCalcState.loser] -= (pointsWinnerGets + honbaRonValue);
     } else {
-      appState.currentPoints[winnerId] += pointsWinnerGets + (appState.tableSize - 1) * honbaTsumoValue;
+      // ツモ和了：アガリ者に「基本点 ＋ 各家からの本場代総額（1人100点）」を加算
+      appState.currentPoints[winnerId] += pointsWinnerGets + ((appState.tableSize - 1) * honbaTsumoValue);
+      
+      // 他の active プレイヤー（子・親）から減算
       appState.activePlayers.forEach((pId) => {
         if (pId === winnerId) return;
         if (currentOyaId === pId) {
+          // 親が支払う分（基本支払い ＋ 本場×100点）
           appState.currentPoints[pId] -= (pointsOyaPays + honbaTsumoValue);
         } else {
+          // 子が支払う分（基本支払い ＋ 本場×100点）
           appState.currentPoints[pId] -= (pointsKoPays + honbaTsumoValue);
         }
       });
     }
 
+    // 4. 卓上にたまっている供託立直棒（1本1000点）をアガリ者が総取り
     if (appState.kyotakuCount > 0) {
       appState.currentPoints[winnerId] += appState.kyotakuCount * 1000;
-      appState.kyotakuCount = 0;
+      appState.kyotakuCount = 0; // 供託をゼロにリセット
     }
     
+    // 5. アガリ発生時の本場・連荘条件の判定
     if (isWinnerOya) {
       isRenchan = true;
-      appState.honbaCount += 1;
+      appState.honbaCount += 1; // 親のアガリなので本場をプラス1
+      alert(`親の和了です！本場を+1します。（現在の本場: ${appState.honbaCount}本場）`);
     } else {
       isRenchan = false;
-      appState.honbaCount = 0;
+      appState.honbaCount = 0;  // 子のアガリなので本場は「0」にリセット
+      alert("子のアガリです。本場を0にリセットします。");
     }
   }
 
+  // ==========================================================================
+  // 3. 親移動・抜け番（4人3打ち）交代の実行判定
+  // ==========================================================================
   if (isRenchan) {
-    alert("親の連荘です！交代はありません。");
+    alert("親の連荘です！次局も同じ親で続行します。");
   } else {
+    // 親が流れた場合の処理
     const modeSelect = document.getElementById("game-mode-select");
     const modeVal = modeSelect ? modeSelect.value : "4";
     
     if (modeVal === "4-3打ち") {
+      // 4人3打ち時のローテーション処理
       const oldOya = appState.activePlayers.shift();
       appState.activePlayers.push(appState.subPlayer);
       appState.subPlayer = oldOya;
@@ -997,8 +1058,9 @@ function executePointTransfer() {
         appState.currentKyoku = 1;
         appState.currentWind += 1;
       }
-      alert(`親移動交代:「${getPlayerName(oldOya)}」が控えへ、お休みの「${getPlayerName(appState.activePlayers[2])}」が卓に入りました！`);
+      alert(`親流れ交代:「${getPlayerName(oldOya)}」が控えへ、お休みの「${getPlayerName(appState.activePlayers[2])}」が次局から参戦します！`);
     } else {
+      // 通常の親移動（席順を1つずらす）
       const shiftedPlayer = appState.activePlayers.shift();
       appState.activePlayers.push(shiftedPlayer);
       appState.currentKyoku += 1;
@@ -1007,15 +1069,16 @@ function executePointTransfer() {
         appState.currentKyoku = 1;
         appState.currentWind += 1;
       }
-      alert("親が流れました。");
+      alert("親が流れました。次局へ移ります。");
     }
   }
 
-  appState.riichiPlayers = [];
-  updateUIKyokuDisplay();
-  refreshMatchPlayerList();
-  clearRoleSlots();
-  saveToLocalStorage();
+  // 次局へ向けた画面・状態の初期化と保存
+  appState.riichiPlayers = []; // 立直状態を全員解除
+  updateUIKyokuDisplay();      // 修正された本場数・供託を画面に一括反映
+  refreshMatchPlayerList();    // 卓上の点数や立直棒表示をリフレッシュ
+  clearRoleSlots();            // 精算パネルのドラッグ枠をクリア
+  saveToLocalStorage();        // 状態をブラウザに自動保存
 }
 
 // 縦画面・横画面どちらのサイコロボタンを押してもエラーを出さずにリアルタイム同期する関数

@@ -1085,7 +1085,7 @@ function executePointTransfer() {
     
     if (modeVal === "4-3打ち") {
       const oldOya = appState.activePlayers.shift();
-      appState.activePlayers.push(appState.subPlayer);
+      const nextInPlayer = appState.subPlayer; 
       appState.subPlayer = oldOya;
       appState.currentKyoku += 1;
       if (appState.currentKyoku > 3) {

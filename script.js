@@ -67,14 +67,6 @@ function saveToLocalStorage() {
   localStorage.setItem("mj_manager_state", JSON.stringify(appState));
 }
 
-// プレイヤーIDから名前を安全に取得するヘルパー関数
-function getPlayerName(id) {
-  if (appState.playerMaster[id]) {
-    return appState.playerMaster[id].name;
-  }
-  return "未知のプレイヤー";
-}
-
 // アプリ起動時の初期処理
 window.onload = function () {
   const savedData = localStorage.getItem("mj_manager_state");
@@ -83,7 +75,6 @@ window.onload = function () {
       appState = JSON.parse(savedData);
 
       // 構造の初期化フォールバック
-      if (!appState.playerMaster) appState.playerMaster = {};
       if (!appState.rooms) appState.rooms = {};
       if (!appState.nextPlayerId) appState.nextPlayerId = 1001;
       if (!appState.currentRoomName) appState.currentRoomName = "デフォルトルーム";

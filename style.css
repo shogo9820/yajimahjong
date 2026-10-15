@@ -698,24 +698,27 @@ body {
     justify-content: center !important; /* 中央に寄せて綺麗に見せる */
   }
 
-  /* 👉 右側：設定項目と決定ボタンエリア（縦スクロール対応で見切れない） */
-  .rules-right-block {
-    flex: 0.8 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    height: 100% !important;
-    min-height: 0 !important;
-    justify-content: space-between !important;
-  }
+/* 👉 右側：設定項目と決定ボタンエリア */
+.rules-right-block {
+  flex: 0.8 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  max-height: 100% !important; /* 👈 追加：画面外への突き抜けを防止 */
+  min-height: 0 !important;
+  justify-content: space-between !important;
+  overflow: hidden !important;   /* 👈 追加：余計なはみ出しによる判定ズレを防止 */
+}
 
-  /* 設定項目のスクロールボックス */
-  .rules-right-config-scroll {
-    flex: 1 !important;
-    overflow-y: auto !important;
-    min-height: 0 !important;
-    padding-right: 4px;
-    margin-bottom: 8px !important;
-  }
+/* 設定項目のスクロールボックス */
+.rules-right-config-scroll {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important; /* 👈 追加：スマホのタップ・スクロールの追従性を上げる */
+  min-height: 0 !important;
+  padding-right: 4px;
+  margin-bottom: 8px !important;
+}
 
   /* 一番下：対局開始ボタンエリア */
   .rules-right-btn-area {

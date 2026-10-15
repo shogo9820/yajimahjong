@@ -633,6 +633,108 @@ body {
 }
 
 /* ==========================================================================
+   💻 横持ち（Landscape）：ルール設定画面の左右2ブロック構造（席決め ➔ 設定＆ボタン）
+   ========================================================================== */
+@media screen and (orientation: landscape) {
+  #screen-rules {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    box-sizing: border-box !important;
+    padding: 8px 16px env(safe-area-inset-bottom, 8px) 16px !important;
+    overflow: hidden !important;
+  }
+
+  /* 上段：タイトルエリア（すっきりスリム化） */
+  #screen-rules > .text-center.py-4,
+  #screen-rules .result-title-section { /* タイトルクラスに応じて調整 */
+    flex-shrink: 0 !important;
+    padding: 4px 0 !important;
+    margin-bottom: 4px !important;
+  }
+
+  /* 下段：席決めと設定を横並び（2カラム）にするメインコンテナ */
+  .rules-content-body {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: row !important; /* 👈 左右に綺麗に並べる */
+    min-height: 0 !important;
+    gap: 20px !important; /* 左右の余白バランス */
+    width: 100% !important;
+  }
+
+  /* 👈 左側：席決めドラッグ＆ドロップエリア（高さを目一杯使う） */
+  .rules-left-block {
+    flex: 1.2 !important; /* 左側を少し広めに */
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    background-color: rgba(30, 41, 59, 0.4);
+    padding: 12px;
+    border-radius: 16px;
+    border: 1px solid rgba(51, 65, 85, 0.4);
+  }
+  
+  /* 席決めのプールとグリッドを縦いっぱいにフィットさせる */
+  .rules-left-block .chip-pool {
+    flex-shrink: 0 !important;
+    margin-bottom: 8px !important;
+  }
+  .rules-left-block .seats-grid {
+    flex: 1 !important;
+    margin-top: 0 !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    min-height: 0 !important;
+  }
+  .rules-left-block .seat-box {
+    height: 100% !important;
+    min-height: 0 !important;
+    padding: 8px !important;
+    justify-content: center !important; /* 中央に寄せて綺麗に見せる */
+  }
+
+  /* 👉 右側：設定項目と決定ボタンエリア（縦スクロール対応で見切れない） */
+  .rules-right-block {
+    flex: 0.8 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    justify-content: space-between !important;
+  }
+
+  /* 設定項目のスクロールボックス */
+  .rules-right-config-scroll {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    min-height: 0 !important;
+    padding-right: 4px;
+    margin-bottom: 8px !important;
+  }
+
+  /* 一番下：対局開始ボタンエリア */
+  .rules-right-btn-area {
+    flex-shrink: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    width: 100% !important;
+  }
+  
+  .rules-right-btn-area .btn {
+    padding: 12px !important;
+    font-size: 15px !important;
+    font-weight: 800 !important;
+    border-radius: 10px !important;
+  }
+}
+
+/* ==========================================================================
    💻 横持ち（Landscape）mahjong-table限界最大化・超特大視認性スタイル
    ========================================================================== */
 @media screen and (orientation: landscape) {

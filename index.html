@@ -332,6 +332,13 @@
                 <!-- 横持ち用 直感精算操作パネル -->
                 <div class="card bg-panel" style="padding: 10px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; min-height: 0;">
                     
+                    <div class="flex gap-1" style="margin-bottom: 6px;">
+                        <button onclick="setAgariType('ron')" id="ls-btn-agari-ron" class="btn-type active" style="padding: 5px; font-size: 11px;">ロン</button>
+                        <button onclick="setAgariType('tsumo')" id="ls-btn-agari-tsumo" class="btn-type" style="padding: 5px; font-size: 11px;">ツモ</button>
+                        <button onclick="setAgariType('tenpai')" id="ls-btn-agari-tenpai" class="btn-type" style="padding: 5px; font-size: 11px;">聴牌</button>
+                        <button onclick="clearRoleSlots()" class="btn-clear" style="padding: 5px 8px; font-size: 11px;">クリア</button>
+                    </div>
+
                     <div class="flex gap-2" style="margin-bottom: 4px;">
                         <div class="role-box winner-target" id="ls-box-winner" style="min-height: 52px; padding: 4px;">
                             <span class="role-label" id="ls-role-winner-label" style="font-size: 10px; margin-bottom: 2px;">🏆 和了 (アガリ)</span>
@@ -341,13 +348,6 @@
                             <span class="role-label" id="ls-role-loser-label" style="font-size: 10px; margin-bottom: 2px;">🎯 放銃 (ロン)</span>
                             <div class="role-slot flex-wrap-gap" id="ls-slot-loser" style="font-size: 11px; padding: 2px;">ドロップ</div>
                         </div>
-                    </div>
-
-                    <div class="flex gap-1" style="margin-bottom: 6px;">
-                        <button onclick="setAgariType('ron')" id="ls-btn-agari-ron" class="btn-type active" style="padding: 5px; font-size: 11px;">ロン</button>
-                        <button onclick="setAgariType('tsumo')" id="ls-btn-agari-tsumo" class="btn-type" style="padding: 5px; font-size: 11px;">ツモ</button>
-                        <button onclick="setAgariType('tenpai')" id="ls-btn-agari-tenpai" class="btn-type" style="padding: 5px; font-size: 11px;">聴牌</button>
-                        <button onclick="clearRoleSlots()" class="btn-clear" style="padding: 5px 8px; font-size: 11px;">クリア</button>
                     </div>
 
                     <div id="ls-panel-scale-box" style="margin-bottom: 4px;">

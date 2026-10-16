@@ -428,20 +428,18 @@ function handleTouchEnd(e) {
 // 対局開始処理（ID不一致によるフリーズを修正した完全版）
 // 🀄 対局開始処理（【対局ログの完全リセット】＆ID不一致フリーズ修正版）
 function startMatch() {
-  // ルーム名設定の取得
   const newRoomInput = document.getElementById("new-room-input");
   if (newRoomInput && newRoomInput.value.trim() !== "") {
     appState.currentRoomName = newRoomInput.value.trim();
-    newRoomInput.value = ""; // 入力欄をクリア
+    newRoomInput.value = "";
   }
   
-  // 選択されたルームが未作成なら初期化
   if (!appState.rooms[appState.currentRoomName]) {
     appState.rooms[appState.currentRoomName] = { 
       roomName: appState.currentRoomName, 
       gameCount: 0, 
       stats: {},
-      playerGames: {} // 各個人のこのルームでの打数を記録する場所
+      playerGames: {}
     };
   }
   if (!appState.rooms[appState.currentRoomName].playerGames) {
@@ -450,7 +448,6 @@ function startMatch() {
 
   appState.activePlayers = [];
   
-  // 麻雀種別（卓の人数）セレクトボックスの正しいID（またはフォールバック）を適用
   const modeSelect = document.getElementById("game-mode-select") || document.getElementById("member-count-select");
   if (!modeSelect) {
     alert("設定読み込みエラー：ゲームモード選択欄が見つかりません。");
@@ -495,21 +492,24 @@ function startMatch() {
   appState.honbaCount = 0;
   appState.kyotakuCount = 0;
   appState.riichiPlayers = [];
-  
-  // 🚨【ご要望の機能】「この配置で対局開始」を押した瞬間に、前の半荘のログデータを完全にリセット
   appState.matchLogs = []; 
   
-  // 共通ログモーダルの表示エリアも、空っぽの初期状態のテキストにリフレッシュ
   const logBox = document.getElementById("modal-log-list-area");
   if (logBox) {
     logBox.innerHTML = '<div style="color: #64748b; text-align: center; padding-top: 40px; font-size: 14px;">まだこの半荘の精算履歴はありません。</div>';
   }
 
-  // 初期持ち点の割り当て
-  appState.activePlayers.forEach((pId) => (appState.currentPoints[pId] = 25000));
-  if (appState.subPlayer) appState.currentPoints[appState.subPlayer] = 25000;
+  // 🚨 持ち点/返し点の設定値を取得して適用
+  const pointsEl = document.getElementById("rule-points");
+  let startPoints = 25000;
+  if (pointsEl) {
+    const parts = pointsEl.value.split("-");
+    startPoints = parseInt(parts[0]) || 25000;
+  }
 
-  // 各種UIの更新と画面遷移
+  appState.activePlayers.forEach((pId) => (appState.currentPoints[pId] = startPoints));
+  if (appState.subPlayer) appState.currentPoints[appState.subPlayer] = startPoints;
+
   updateUIKyokuDisplay();
   refreshMatchPlayerList();
   clearRoleSlots();
@@ -574,6 +574,13 @@ function refreshMatchPlayerList() {
   const modeVal = modeSelect ? modeSelect.value : "4";
   const isSanma = appState.tableSize === 3;
 
+  const pointsEl = document.getElementById("rule-points");
+  let defaultPt = 25000;
+  if (pointsEl) {
+    const parts = pointsEl.value.split("-");
+    defaultPt = parseInt(parts[0]) || 25000;
+  }
+
   // 1. 📱 縦持ち用リスト
   const listContainer = document.getElementById("match-players-list");
   if (listContainer) {
@@ -581,9 +588,8 @@ function refreshMatchPlayerList() {
     for (let i = 0; i < appState.tableSize; i++) {
       const pId = appState.activePlayers[i];
       const wind = windLabels[i];
-      if (appState.currentPoints[pId] === undefined) appState.currentPoints[pId] = 25000;
+      if (appState.currentPoints[pId] === undefined) appState.currentPoints[pId] = defaultPt;
 
-      // 縦画面でも立直しているのが分かるように、立直中の場合は「is-riichi」クラスを付与
       const isRiichi = appState.riichiPlayers.includes(pId);
       const riichiClass = isRiichi ? "is-riichi" : "";
 
@@ -612,13 +618,11 @@ function refreshMatchPlayerList() {
     const seatEl = document.getElementById(seatId);
     if (!seatEl) return;
 
-    // 純粋な3人打ち（サンマ）で左の席を使わない場合
     if (isSanma && modeVal !== "4-3打ち" && physicalIndex === 3) {
       seatEl.className = "table-seat seat-left seat-vacant";
       seatEl.innerHTML = `
         <div class="seat-header-row justify-center py-2"><span class="vacant-badge" style="font-size:11px;color:#94a3b8;">不使用</span></div>
         <div class="seat-score-row"><span class="seat-score-text" style="color:#475569;font-size:18px !important;">---</span></div>
-        <!-- バグ防止用に非表示の棒を置いておく -->
         <div class="riichi-stick hidden" style="position: absolute; width: 60px; height: 6px; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 3px; box-shadow: 0 0 4px rgba(255,255,255,0.5);"></div>
       `;
       return;
@@ -626,10 +630,9 @@ function refreshMatchPlayerList() {
 
     let pId = appState.activePlayers[physicalIndex];
 
-    // 🚨【4人3打ち対応】左の席が「控え（お休み）」プレイヤーの場合
     if (modeVal === "4-3打ち" && physicalIndex === 3) {
       pId = appState.subPlayer;
-      const subScore = appState.currentPoints[pId] !== undefined ? appState.currentPoints[pId] : 25000;
+      const subScore = appState.currentPoints[pId] !== undefined ? appState.currentPoints[pId] : defaultPt;
       seatEl.className = "table-seat seat-left seat-vacant";
       seatEl.innerHTML = `
         <div class="seat-header-row" style="justify-content:space-between;width:100%;">
@@ -637,18 +640,16 @@ function refreshMatchPlayerList() {
           <span class="match-player-chip" style="font-size:12px;background:transparent;border:none;max-width:100px;text-overflow:ellipsis;overflow:hidden;">${getPlayerName(pId)}</span>
         </div>
         <div class="seat-score-row"><span class="seat-score-text" style="color:#64748b;font-size:20px !important;">${subScore.toLocaleString()}</span></div>
-        <!-- 交代して復帰した時のために、控え席にもあらかじめ立直棒のHTML要素を仕込んでおく -->
         <div class="riichi-stick hidden" style="position: absolute; width: 60px; height: 6px; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 3px; box-shadow: 0 0 4px rgba(255,255,255,0.5);"></div>
       `;
       return;
     }
 
-    // 通常の対局席の描画
     seatEl.classList.remove("seat-vacant");
     const windIndex = (physicalIndex - oyaOffset + 4) % 4;
     const currentWind = windLabels[windIndex];
     const isOya = currentWind === "東";
-    const pScore = appState.currentPoints[pId] !== undefined ? appState.currentPoints[pId] : 25000;
+    const pScore = appState.currentPoints[pId] !== undefined ? appState.currentPoints[pId] : defaultPt;
 
     seatEl.innerHTML = `
       <div class="seat-header-row">
@@ -659,15 +660,12 @@ function refreshMatchPlayerList() {
         <div class="match-player-chip" id="ls-chip-${pId}" data-player-id="${pId}" draggable="true" style="font-size:12px;padding:2px 6px;">${getPlayerName(pId)}</div>
       </div>
       <div class="seat-score-row"><span class="seat-score-text">${pScore.toLocaleString()}</span></div>
-      
-      <!-- 🚨 卓上の立直棒HTML要素 -->
       <div class="riichi-stick hidden" style="position: absolute; width: 60px; height: 6px; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 3px; box-shadow: 0 0 4px rgba(255,255,255,0.5);"></div>
     `;
 
     const chip = seatEl.querySelector(".match-player-chip");
     bindChipEvents(chip);
 
-    // 立直棒の表示・非表示リアルタイム制御
     const stick = seatEl.querySelector(".riichi-stick");
     if (stick) {
       if (appState.riichiPlayers.includes(pId)) {
@@ -1160,15 +1158,30 @@ function endMatch() {
   }
   currentScores.sort((a, b) => b.score - a.score || a.index - b.index);
 
-  const baseReturn = 30000;
+  // 🚨 持ち点・返し点設定を動的に取得
+  const pointsEl = document.getElementById("rule-points");
+  let startPoints = 25000;
+  let baseReturn = 30000;
+
+  if (pointsEl) {
+    const parts = pointsEl.value.split("-");
+    startPoints = parseInt(parts[0]) || 25000;
+    baseReturn = parseInt(parts[1]) || 30000;
+  }
+
   const is3人 = appState.tableSize === 3;
+  const numPlayers = is3人 ? 3 : 4;
+  
+  // オカの計算: (返し点 - 持ち点) × 参加人数 / 1000
+  const oka = ((baseReturn - startPoints) * numPlayers) / 1000;
+
   const umaRuleEl = document.getElementById("rule-uma");
   const umaRule = umaRuleEl ? umaRuleEl.value : "10-30";
   
   let uma = is3人 ? [10, 0, -10] : [20, 10, -10, -20];
   if (umaRule === "10-30") uma = is3人 ? [20, 0, -20] : [30, 10, -10, -30];
   if (umaRule === "10-20") uma = is3人 ? [10, 0, -10] : [20, 10, -10, -20];
-  const oka = is3人 ? 15 : 20;
+  if (umaRule === "none") uma = is3人 ? [0, 0, 0] : [0, 0, 0, 0];
 
   let room = appState.rooms[appState.currentRoomName];
   room.gameCount++;
@@ -1187,7 +1200,6 @@ function endMatch() {
       pt: finalPt,
     });
     
-    // ルーム内の該当プレイヤーデータに直接成績と対局数を加算する
     if (room.players[item.id]) {
       room.players[item.id].points += finalPt;
       room.players[item.id].totalGames++;

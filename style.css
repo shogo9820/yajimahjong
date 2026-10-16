@@ -601,10 +601,10 @@ body {
   #screen-rules > div:nth-child(2),
   #screen-result > div:first-child,
   .portrait-scroll-body {
-    flex: 1 1 0% !important;
+    /* flex: 1 1 0% !important; */
     min-height: 0 !important;
     overflow-y: auto !important;
-    padding-right: 2px;
+    padding-right: 6px;
     margin-bottom: 6px !important;
   }
 

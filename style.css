@@ -693,18 +693,33 @@ body {
   font-weight: 900;
 }
 
-/* 翻・符のセレクトボックス：サイズとタップ領域を拡大 */
 .inline-select-sm {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 100%;
   background-color: #0f172a;
   border: 1.5px solid #475569;
-  color: #f8fafc;
-  padding: 8px 12px; /* パディングを広げて押しやすく */
   border-radius: 8px;
-  font-size: 14px;   /* 12pxから拡大 */
+  color: #f8fafc;
+  
+  /* 🚨 縦幅をしっかり厚くする設定 */
+  height: 44px;
+  min-height: 44px;
+  line-height: 40px;
+  padding: 0 8px;
+  
+  /* 文字の大きさと中央揃え */
+  font-size: 15px;
   font-weight: 700;
+  text-align: center;
+  text-align-last: center; /* iOSで選択中テキストを中央にする */
+  
   outline: none;
-  min-height: 42px;
+  cursor: pointer;
+  box-sizing: border-box;
 }
+
 .inline-select-sm:focus {
   border-color: #34d399;
 }

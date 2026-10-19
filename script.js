@@ -17,16 +17,16 @@ const windLabels = ["東", "南", "西", "北"];
 // アプリ内部のすべての状態データを一元管理（ルーム主導・エラー防止完全版）
 let appState = {
   rooms: {
-    "デフォルトルーム": {
+    デフォルトルーム: {
       roomName: "デフォルトルーム",
       gameCount: 0,
       nextPlayerId: 1,
       players: {},
-      playerGames: {}
-    }
+      playerGames: {},
+    },
   },
   currentRoomName: "デフォルトルーム",
-  allPlayers: [],    // 今回の対局メンバー（現在のルーム内のプレイヤーID配列）
+  allPlayers: [], // 今回の対局メンバー（現在のルーム内のプレイヤーID配列）
   activePlayers: [], // 東南西北
   subPlayer: null,
   currentPoints: {},
@@ -37,15 +37,15 @@ let appState = {
   kyotakuCount: 0,
   riichiPlayers: [],
   currentScreen: "screen-register",
-  
+
   // 過去データ互換用のダミー（エラー防止）
   stats: {},
-  gameCount: 0
+  gameCount: 0,
 };
 
 let matchCalcState = {
   winners: [], // IDで管理
-  loser: null,  // IDで管理
+  loser: null, // IDで管理
   type: "ron",
   scale: null,
 };
@@ -57,9 +57,9 @@ let touchOffsetTop = 0;
 // 横持ち卓の4席ID（手前・右・奥・左）
 const LANDSCAPE_SEAT_IDS = [
   "ls-seat-bottom", // 手前 (Seat 0)
-  "ls-seat-right",  // 右 (Seat 1)
-  "ls-seat-top",    // 奥 (Seat 2)
-  "ls-seat-left"    // 左 (Seat 3)
+  "ls-seat-right", // 右 (Seat 1)
+  "ls-seat-top", // 奥 (Seat 2)
+  "ls-seat-left", // 左 (Seat 3)
 ];
 
 // データをローカルストレージに自動保存する関数
@@ -77,7 +77,8 @@ window.onload = function () {
       // 構造の初期化フォールバック
       if (!appState.rooms) appState.rooms = {};
       if (!appState.nextPlayerId) appState.nextPlayerId = 1001;
-      if (!appState.currentRoomName) appState.currentRoomName = "デフォルトルーム";
+      if (!appState.currentRoomName)
+        appState.currentRoomName = "デフォルトルーム";
 
       // 1. メンバー一覧入力枠の復元
       const memberSelect = document.getElementById("member-count-select");
@@ -85,7 +86,7 @@ window.onload = function () {
         memberSelect.value = appState.allPlayers.length || 4;
       }
       updatePlayerInputs();
-      
+
       // 2. ルーム選択肢の更新
       updateRoomSelectOptions();
 
@@ -117,7 +118,7 @@ function updatePlayerInputs() {
 
   const room = appState.rooms[appState.currentRoomName] || { players: {} };
   const pIds = Object.keys(room.players);
-  
+
   const countSelect = document.getElementById("member-count-select");
   let count = countSelect ? parseInt(countSelect.value) : 4;
   if (pIds.length > count) {
@@ -129,7 +130,7 @@ function updatePlayerInputs() {
   for (let i = 0; i < count; i++) {
     const pId = pIds[i] || "";
     const pName = pId ? room.players[pId].name : "";
-    const displayId = pId ? pId : (i + 1);
+    const displayId = pId ? pId : i + 1;
 
     const div = document.createElement("div");
     div.className = "input-row";
@@ -161,13 +162,17 @@ function updateRoomSelectOptions() {
   const roomSelect = document.getElementById("room-select");
   if (!roomSelect) return;
   roomSelect.innerHTML = "";
-  
+
   // デフォルトルームがなければ作成
   if (!appState.rooms["デフォルトルーム"]) {
-    appState.rooms["デフォルトルーム"] = { roomName: "デフォルトルーム", gameCount: 0, stats: {} };
+    appState.rooms["デフォルトルーム"] = {
+      roomName: "デフォルトルーム",
+      gameCount: 0,
+      stats: {},
+    };
   }
 
-  Object.keys(appState.rooms).forEach(rName => {
+  Object.keys(appState.rooms).forEach((rName) => {
     const opt = document.createElement("option");
     opt.value = rName;
     opt.innerText = rName;
@@ -182,22 +187,28 @@ function updateRoomSelectOptions() {
 function deleteCurrentRoom() {
   const rName = appState.currentRoomName;
   if (rName === "デフォルトルーム") {
-    alert("「デフォルトルーム」は削除できません。自分で作成したルームを削除してください。");
+    alert(
+      "「デフォルトルーム」は削除できません。自分で作成したルームを削除してください。",
+    );
     return;
   }
 
-  if (confirm(`本当にルーム「${rName}」を削除しますか？\nこのグループに保存されているメンバーの名前、これまでの全成績が完全に消去されます。`)) {
+  if (
+    confirm(
+      `本当にルーム「${rName}」を削除しますか？\nこのグループに保存されているメンバーの名前、これまでの全成績が完全に消去されます。`,
+    )
+  ) {
     // データを完全に消去
     delete appState.rooms[rName];
-    
+
     // 削除後は「デフォルトルーム」に自動で引き戻す
     appState.currentRoomName = "デフォルトルーム";
-    
+
     // セレクトボックスの選択肢とプレイヤー入力欄をリフレッシュ
     updateRoomSelectOptions();
     updatePlayerInputs();
     saveToLocalStorage();
-    
+
     alert(`ルーム「${rName}」を削除しました。`);
   }
 }
@@ -215,19 +226,19 @@ function submitRegistration() {
   const countSelect = document.getElementById("member-count-select");
   if (!countSelect) return;
   const count = parseInt(countSelect.value);
-  
+
   // 🚨【重要】現在選択・入力されているルーム名がroomsに存在しない場合、ここで強制的に初期箱を作成する
   if (!appState.currentRoomName) {
     appState.currentRoomName = "デフォルトルーム";
   }
-  
+
   if (!appState.rooms[appState.currentRoomName]) {
     appState.rooms[appState.currentRoomName] = {
       roomName: appState.currentRoomName,
       gameCount: 0,
       nextPlayerId: 1,
       players: {},
-      playerGames: {}
+      playerGames: {},
     };
   }
 
@@ -240,7 +251,7 @@ function submitRegistration() {
     if (!val) continue;
 
     let pId = input.getAttribute("data-player-id");
-    
+
     // まだIDがない新規登録プレイヤーの場合
     if (!pId) {
       pId = room.nextPlayerId;
@@ -320,7 +331,10 @@ function setupDragAndDrop() {
     seat.addEventListener("dragleave", handleDragLeave);
     seat.addEventListener("drop", handleDrop);
 
-    const label = (modeVal === "4-3打ち" && i === 3) ? "控（抜け番）" : `${windLabels[i]}家 席`;
+    const label =
+      modeVal === "4-3打ち" && i === 3
+        ? "控（抜け番）"
+        : `${windLabels[i]}家 席`;
     seat.innerHTML = `<span class="seat-label active-wind">${label}</span>`;
     seats.appendChild(seat);
   }
@@ -332,7 +346,9 @@ function handleDragStart(e) {
 
 function handleDragEnd(e) {
   this.style.opacity = "1";
-  document.querySelectorAll(".seat-box, .role-box").forEach((s) => s.classList.remove("drag-over"));
+  document
+    .querySelectorAll(".seat-box, .role-box")
+    .forEach((s) => s.classList.remove("drag-over"));
 }
 
 function handleDragOver(e) {
@@ -360,7 +376,7 @@ function handleTouchStart(e) {
   draggedElement = this;
   const touch = e.touches[0];
   const rect = this.getBoundingClientRect();
-  
+
   // 🚨 画面上の絶対位置から指のズレ（オフセット）を正確に計算（回転要素の影響を遮断）
   touchOffsetLeft = touch.clientX - rect.left;
   touchOffsetTop = touch.clientY - rect.top;
@@ -368,10 +384,10 @@ function handleTouchStart(e) {
   this.style.position = "fixed";
   this.style.zIndex = "1000";
   this.style.width = `${rect.width}px`;
-  
+
   // 🚨 横持ちの席（transformによる回転）から隔離するため、一時的に回転を打ち消す
-  this.style.transform = "none"; 
-  
+  this.style.transform = "none";
+
   moveAt(touch.clientX, touch.clientY);
 }
 
@@ -383,10 +399,14 @@ function handleTouchMove(e) {
 
   // 指の直下にある要素を正確に検知
   const elementTarget = document.elementFromPoint(touch.clientX, touch.clientY);
-  document.querySelectorAll(".seat-box, .role-box, .winner-target, .loser-target").forEach((s) => s.classList.remove("drag-over"));
+  document
+    .querySelectorAll(".seat-box, .role-box, .winner-target, .loser-target")
+    .forEach((s) => s.classList.remove("drag-over"));
 
   if (elementTarget) {
-    const targetBox = elementTarget.closest(".seat-box, .winner-target, .loser-target");
+    const targetBox = elementTarget.closest(
+      ".seat-box, .winner-target, .loser-target",
+    );
     if (targetBox) targetBox.classList.add("drag-over");
   }
 }
@@ -406,7 +426,10 @@ function handleTouchEnd(e) {
   draggedElement.style.width = "";
 
   const changedTouch = e.changedTouches[0];
-  const elementTarget = document.elementFromPoint(changedTouch.clientX, changedTouch.clientY);
+  const elementTarget = document.elementFromPoint(
+    changedTouch.clientX,
+    changedTouch.clientY,
+  );
   const pool = document.getElementById("pool-container");
 
   if (elementTarget && pool) {
@@ -421,7 +444,9 @@ function handleTouchEnd(e) {
   } else if (pool) {
     pool.appendChild(draggedElement);
   }
-  document.querySelectorAll(".seat-box").forEach((s) => s.classList.remove("drag-over"));
+  document
+    .querySelectorAll(".seat-box")
+    .forEach((s) => s.classList.remove("drag-over"));
   draggedElement = null;
 }
 
@@ -433,13 +458,13 @@ function startMatch() {
     appState.currentRoomName = newRoomInput.value.trim();
     newRoomInput.value = "";
   }
-  
+
   if (!appState.rooms[appState.currentRoomName]) {
-    appState.rooms[appState.currentRoomName] = { 
-      roomName: appState.currentRoomName, 
-      gameCount: 0, 
+    appState.rooms[appState.currentRoomName] = {
+      roomName: appState.currentRoomName,
+      gameCount: 0,
       stats: {},
-      playerGames: {}
+      playerGames: {},
     };
   }
   if (!appState.rooms[appState.currentRoomName].playerGames) {
@@ -447,8 +472,10 @@ function startMatch() {
   }
 
   appState.activePlayers = [];
-  
-  const modeSelect = document.getElementById("game-mode-select") || document.getElementById("member-count-select");
+
+  const modeSelect =
+    document.getElementById("game-mode-select") ||
+    document.getElementById("member-count-select");
   if (!modeSelect) {
     alert("設定読み込みエラー：ゲームモード選択欄が見つかりません。");
     return;
@@ -464,7 +491,9 @@ function startMatch() {
         alert(`${windLabels[i]}家の席にプレイヤーを配置してください。`);
         return;
       }
-      appState.activePlayers.push(parseInt(chip.getAttribute("data-player-id")));
+      appState.activePlayers.push(
+        parseInt(chip.getAttribute("data-player-id")),
+      );
     }
     const seatBox3 = document.getElementById("seat-3");
     const chip3 = seatBox3 ? seatBox3.querySelector(".player-chip") : null;
@@ -483,7 +512,9 @@ function startMatch() {
         alert(`${windLabels[i]}家の席にプレイヤーを配置してください。`);
         return;
       }
-      appState.activePlayers.push(parseInt(chip.getAttribute("data-player-id")));
+      appState.activePlayers.push(
+        parseInt(chip.getAttribute("data-player-id")),
+      );
     }
   }
 
@@ -492,11 +523,12 @@ function startMatch() {
   appState.honbaCount = 0;
   appState.kyotakuCount = 0;
   appState.riichiPlayers = [];
-  appState.matchLogs = []; 
-  
+  appState.matchLogs = [];
+
   const logBox = document.getElementById("modal-log-list-area");
   if (logBox) {
-    logBox.innerHTML = '<div style="color: #64748b; text-align: center; padding-top: 40px; font-size: 14px;">まだこの半荘の精算履歴はありません。</div>';
+    logBox.innerHTML =
+      '<div style="color: #64748b; text-align: center; padding-top: 40px; font-size: 14px;">まだこの半荘の精算履歴はありません。</div>';
   }
 
   // 🚨 持ち点/返し点の設定値を取得して適用
@@ -507,8 +539,11 @@ function startMatch() {
     startPoints = parseInt(parts[0]) || 25000;
   }
 
-  appState.activePlayers.forEach((pId) => (appState.currentPoints[pId] = startPoints));
-  if (appState.subPlayer) appState.currentPoints[appState.subPlayer] = startPoints;
+  appState.activePlayers.forEach(
+    (pId) => (appState.currentPoints[pId] = startPoints),
+  );
+  if (appState.subPlayer)
+    appState.currentPoints[appState.subPlayer] = startPoints;
 
   updateUIKyokuDisplay();
   refreshMatchPlayerList();
@@ -517,48 +552,47 @@ function startMatch() {
 }
 
 function updateUIKyokuDisplay() {
-  const roundStr = (appState.currentWind === 0 ? "東" : "南") + appState.currentKyoku + "局";
+  const roundStr =
+    (appState.currentWind === 0 ? "東" : "南") + appState.currentKyoku + "局";
   const oyaWind = appState.currentWind === 0 ? "東" : "南";
   const honbaStr = `${appState.honbaCount} 本場`;
   const kyotakuStr = `供託 ${appState.kyotakuCount}本`;
 
   // 1. 🀄 局数（東南の文字）のディスプレイIDを並べて書き換え
-  ["current-wind-label", "ls-wind-label"].forEach(id => {
+  ["current-wind-label", "ls-wind-label"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.innerText = oyaWind;
   });
 
   // 🚨 局数の数字（1局など）のディスプレイIDを並べて書き換え
-  ["current-kyoku-num", "ls-kyoku-num"].forEach(id => {
+  ["current-kyoku-num", "ls-kyoku-num"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.innerText = appState.currentKyoku;
   });
 
-
   // 2. 🀄 本場表示のディスプレイIDを並べて書き換え
   // 縦画面（current-honba）と、横画面ヘッダー（ls-honba）を一気に更新
-  ["current-honba", "ls-honba"].forEach(id => {
+  ["current-honba", "ls-honba"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) {
       // 横画面のヘッダーバッジ用に綺麗に「〇本場」の形式で流し込みます
-      el.innerText = (id === "ls-honba") ? `${appState.honbaCount}本場` : honbaStr;
+      el.innerText =
+        id === "ls-honba" ? `${appState.honbaCount}本場` : honbaStr;
     }
   });
 
-
   // 3. 🀄 供託表示のディスプレイIDを並べて書き換え
   // 縦画面（current-kyotaku）と、横画面ヘッダー（ls-kyotaku）を一気に更新
-  ["current-kyotaku", "ls-kyotaku"].forEach(id => {
+  ["current-kyotaku", "ls-kyotaku"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.innerText = kyotakuStr;
   });
-
 
   // 4. 🎯【今回のバグ修正の核心】横画面の卓の真ん中（中央ハブ）をピンポイント更新
   // 教えていただいた本物のID「ls-center-round」と「ls-center-honba」をここで直接書き換えます！
   const hubRound = document.getElementById("ls-center-round");
   const hubHonba = document.getElementById("ls-center-honba");
-  
+
   if (hubRound) {
     hubRound.innerText = roundStr; // 例：「東1局」
   }
@@ -588,7 +622,8 @@ function refreshMatchPlayerList() {
     for (let i = 0; i < appState.tableSize; i++) {
       const pId = appState.activePlayers[i];
       const wind = windLabels[i];
-      if (appState.currentPoints[pId] === undefined) appState.currentPoints[pId] = defaultPt;
+      if (appState.currentPoints[pId] === undefined)
+        appState.currentPoints[pId] = defaultPt;
 
       const isRiichi = appState.riichiPlayers.includes(pId);
       const riichiClass = isRiichi ? "is-riichi" : "";
@@ -599,7 +634,7 @@ function refreshMatchPlayerList() {
       div.innerHTML = `
         <div class="flex items-center gap-1">
           <span class="wind-badge">${wind}</span>
-          <button onclick="declareRiichi('${pId}')" class="btn-riichi" ${isRiichi ? 'disabled' : ''}>立直</button>
+          <button onclick="declareRiichi('${pId}')" class="btn-riichi" ${isRiichi ? "disabled" : ""}>立直</button>
           <div class="match-player-chip" id="m-chip-${pId}" data-player-id="${pId}" draggable="true">${getPlayerName(pId)}</div>
         </div>
         <input type="number" id="match-pt-${pId}" value="${appState.currentPoints[pId]}" step="100" class="input-score" onchange="syncManualScore('${pId}', this.value)">
@@ -632,7 +667,10 @@ function refreshMatchPlayerList() {
 
     if (modeVal === "4-3打ち" && physicalIndex === 3) {
       pId = appState.subPlayer;
-      const subScore = appState.currentPoints[pId] !== undefined ? appState.currentPoints[pId] : defaultPt;
+      const subScore =
+        appState.currentPoints[pId] !== undefined
+          ? appState.currentPoints[pId]
+          : defaultPt;
       seatEl.className = "table-seat seat-left seat-vacant";
       seatEl.innerHTML = `
         <div class="seat-header-row" style="justify-content:space-between;width:100%;">
@@ -649,12 +687,15 @@ function refreshMatchPlayerList() {
     const windIndex = (physicalIndex - oyaOffset + 4) % 4;
     const currentWind = windLabels[windIndex];
     const isOya = currentWind === "東";
-    const pScore = appState.currentPoints[pId] !== undefined ? appState.currentPoints[pId] : defaultPt;
+    const pScore =
+      appState.currentPoints[pId] !== undefined
+        ? appState.currentPoints[pId]
+        : defaultPt;
 
     seatEl.innerHTML = `
       <div class="seat-header-row">
         <div class="flex items-center gap-1">
-          <span class="wind-badge-sm ${isOya ? 'bg-amber-500 text-black font-black' : ''}" style="width:24px;height:24px;font-size:12px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#1e293b;color:#34d399;font-weight:bold;border:1px solid #475569;">${currentWind}</span>
+          <span class="wind-badge-sm ${isOya ? "bg-amber-500 text-black font-black" : ""}" style="width:24px;height:24px;font-size:12px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#1e293b;color:#34d399;font-weight:bold;border:1px solid #475569;">${currentWind}</span>
           <button onclick="declareRiichi('${pId}')" class="btn-riichi" style="padding:2px 6px;font-size:10px;margin-left:4px;">立直</button>
         </div>
         <div class="match-player-chip" id="ls-chip-${pId}" data-player-id="${pId}" draggable="true" style="font-size:12px;padding:2px 6px;">${getPlayerName(pId)}</div>
@@ -690,13 +731,17 @@ function syncManualScore(pId, value) {
   appState.currentPoints[pId] = parseInt(value) || 0;
   saveToLocalStorage();
   updateUIKyokuDisplay();
-  
+
   LANDSCAPE_SEAT_IDS.forEach((seatId, idx) => {
     const seatEl = document.getElementById(seatId);
     if (!seatEl) return;
-    if (appState.activePlayers[idx] == pId || (idx === 3 && appState.subPlayer == pId)) {
+    if (
+      appState.activePlayers[idx] == pId ||
+      (idx === 3 && appState.subPlayer == pId)
+    ) {
       const scoreTxt = seatEl.querySelector(".seat-score-text");
-      if (scoreTxt) scoreTxt.innerText = (parseInt(value) || 0).toLocaleString();
+      if (scoreTxt)
+        scoreTxt.innerText = (parseInt(value) || 0).toLocaleString();
     }
   });
 }
@@ -707,7 +752,7 @@ function handleRoleDrop(e) {
   if (!draggedElement) return;
   const slot = this.querySelector(".role-slot");
   if (!slot) return;
-  
+
   const pId = parseInt(draggedElement.getAttribute("data-player-id"));
   const name = getPlayerName(pId);
 
@@ -742,7 +787,7 @@ function appendChipToSlot(slot, name, pId) {
 
 function handleMatchTouchEnd(e) {
   if (!draggedElement) return;
-  
+
   // チップに一時的に付与していた fixed や transform の設定をきれいにリセット
   draggedElement.style.position = "";
   draggedElement.style.zIndex = "";
@@ -752,7 +797,10 @@ function handleMatchTouchEnd(e) {
   draggedElement.style.transform = "";
 
   const changedTouch = e.changedTouches[0];
-  const targetEl = document.elementFromPoint(changedTouch.clientX, changedTouch.clientY);
+  const targetEl = document.elementFromPoint(
+    changedTouch.clientX,
+    changedTouch.clientY,
+  );
   const pId = parseInt(draggedElement.getAttribute("data-player-id"));
   const name = getPlayerName(pId);
 
@@ -760,7 +808,7 @@ function handleMatchTouchEnd(e) {
     // 🚨 縦画面・横画面どちらの「winner-target」「loser-target」クラスのドロップ枠でも検知できるように統一
     const winnerBox = targetEl.closest(".winner-target");
     const loserBox = targetEl.closest(".loser-target");
-    
+
     if (winnerBox) {
       const slot = winnerBox.querySelector(".role-slot");
       if (slot) {
@@ -785,49 +833,60 @@ function handleMatchTouchEnd(e) {
       }
     }
   }
-  document.querySelectorAll(".role-box, .winner-target, .loser-target").forEach((b) => b.classList.remove("drag-over"));
+  document
+    .querySelectorAll(".role-box, .winner-target, .loser-target")
+    .forEach((b) => b.classList.remove("drag-over"));
   draggedElement = null;
 }
 
 function setAgariType(type) {
   matchCalcState.type = type;
 
-  ["btn-agari-ron", "ls-btn-agari-ron"].forEach(id => {
+  ["btn-agari-ron", "ls-btn-agari-ron"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle("active", type === "ron");
   });
-  ["btn-agari-tsumo", "ls-btn-agari-tsumo"].forEach(id => {
+  ["btn-agari-tsumo", "ls-btn-agari-tsumo"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle("active", type === "tsumo");
   });
-  ["btn-agari-tenpai", "ls-btn-agari-tenpai"].forEach(id => {
+  ["btn-agari-tenpai", "ls-btn-agari-tenpai"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle("active-tenpai", type === "tenpai");
   });
 
   clearRoleSlotsOnly();
 
-  const isTenpai = (type === "tenpai");
-  const isTsumo = (type === "tsumo");
+  const isTenpai = type === "tenpai";
+  const isTsumo = type === "tsumo";
 
-  const winnerTexts = isTenpai ? "⭕ 聴牌者 (それ以外はノーテン)" : "🏆 和了者 (アガリ)";
-  const loserTexts  = isTenpai ? "❌ （聴牌時は不使用）" : "🎯 放銃者 (ロンの場合)";
+  const winnerTexts = isTenpai
+    ? "⭕ 聴牌者 (それ以外はノーテン)"
+    : "🏆 和了者 (アガリ)";
+  const loserTexts = isTenpai
+    ? "❌ （聴牌時は不使用）"
+    : "🎯 放銃者 (ロンの場合)";
 
-  ["role-winner-label", "ls-role-winner-label"].forEach(id => {
+  ["role-winner-label", "ls-role-winner-label"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.innerText = winnerTexts;
   });
-  ["role-loser-label", "ls-role-loser-label"].forEach(id => {
+  ["role-loser-label", "ls-role-loser-label"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.innerText = loserTexts;
   });
 
-  ["role-loser-box", "ls-role-loser-box"].forEach(id => {
+  ["role-loser-box", "ls-role-loser-box"].forEach((id) => {
     const el = document.getElementById(id);
-    if (el) el.style.opacity = isTenpai ? "0.2" : (isTsumo ? "0.3" : "1");
+    if (el) el.style.opacity = isTenpai ? "0.2" : isTsumo ? "0.3" : "1";
   });
 
-  ["panel-scale-box", "ls-panel-scale-box", "panel-detail-box", "ls-panel-detail-box"].forEach(id => {
+  [
+    "panel-scale-box",
+    "ls-panel-scale-box",
+    "panel-detail-box",
+    "ls-panel-detail-box",
+  ].forEach((id) => {
     const el = document.getElementById(id);
     if (el) {
       if (isTenpai) el.classList.add("hidden");
@@ -837,7 +896,9 @@ function setAgariType(type) {
 }
 
 function selectManganScale(scale) {
-  document.querySelectorAll(".btn-scale").forEach((b) => b.classList.remove("active"));
+  document
+    .querySelectorAll(".btn-scale")
+    .forEach((b) => b.classList.remove("active"));
   if (matchCalcState.scale === scale) {
     matchCalcState.scale = null;
   } else {
@@ -862,7 +923,9 @@ function clearRoleSlotsOnly() {
   matchCalcState.winners = [];
   matchCalcState.loser = null;
   matchCalcState.scale = null;
-  document.querySelectorAll(".btn-scale").forEach((b) => b.classList.remove("active"));
+  document
+    .querySelectorAll(".btn-scale")
+    .forEach((b) => b.classList.remove("active"));
 }
 
 function clearRoleSlots() {
@@ -883,17 +946,17 @@ function executePointTransfer() {
 
   const currentOyaId = appState.activePlayers[0];
   let isRenchan = false;
-  
+
   const currentHonba = appState.honbaCount;
   const honbaRonValue = currentHonba * 300;
   const honbaTsumoValue = currentHonba * 100;
 
   // 🚨 新しいログ格納用のオブジェクト構造（ご提示いただいたフォーマットで描画するための設計）
   let currentLogObj = {
-    title: `${(appState.currentWind === 0 ? "東" : "南")}${appState.currentKyoku}局　${currentHonba}本場`,
+    title: `${appState.currentWind === 0 ? "東" : "南"}${appState.currentKyoku}局　${currentHonba}本場`,
     rows: [],
     isTobiEnd: false,
-    tobiPlayer: ""
+    tobiPlayer: "",
   };
 
   // ==========================================================================
@@ -907,23 +970,44 @@ function executePointTransfer() {
     if (tenpaiCount > 0 && noTenCount > 0) {
       let plusScore = 0;
       let minusScore = 0;
-      if (tenpaiCount === 1) { plusScore = 3000; minusScore = 3000 / noTenCount; }
-      if (tenpaiCount === 2) { plusScore = 1500; minusScore = 1500; }
-      if (tenpaiCount === 3) { plusScore = 1000; minusScore = 3000; }
+      if (tenpaiCount === 1) {
+        plusScore = 3000;
+        minusScore = 3000 / noTenCount;
+      }
+      if (tenpaiCount === 2) {
+        plusScore = 1500;
+        minusScore = 1500;
+      }
+      if (tenpaiCount === 3) {
+        plusScore = 1000;
+        minusScore = 3000;
+      }
 
       allActive.forEach((pId) => {
         if (matchCalcState.winners.includes(pId)) {
           appState.currentPoints[pId] += plusScore;
-          currentLogObj.rows.push({ type: "荒牌　　", name: getPlayerName(pId), pt: plusScore });
+          currentLogObj.rows.push({
+            type: "荒牌　　",
+            name: getPlayerName(pId),
+            pt: plusScore,
+          });
         } else {
           appState.currentPoints[pId] -= minusScore;
-          currentLogObj.rows.push({ type: "　　　　", name: getPlayerName(pId), pt: -minusScore });
+          currentLogObj.rows.push({
+            type: "　　　　",
+            name: getPlayerName(pId),
+            pt: -minusScore,
+          });
         }
       });
     } else {
       // 全員ノーテンまたは全員テンパイで点数移動がない場合
       allActive.forEach((pId) => {
-        currentLogObj.rows.push({ type: "荒牌　　", name: getPlayerName(pId), pt: 0 });
+        currentLogObj.rows.push({
+          type: "荒牌　　",
+          name: getPlayerName(pId),
+          pt: 0,
+        });
       });
     }
 
@@ -934,30 +1018,41 @@ function executePointTransfer() {
     }
 
     appState.honbaCount += 1;
-    alert(`流局精算を完了しました（本場を+1します。現在の本場: ${appState.honbaCount}本場）`);
+    alert(
+      `流局精算を完了しました（本場を+1します。現在の本場: ${appState.honbaCount}本場）`,
+    );
 
-  // ==========================================================================
-  // ケース B：誰かが和了（アガリ）した場合
-  // ==========================================================================
+    // ==========================================================================
+    // ケース B：誰かが和了（アガリ）した場合
+    // ==========================================================================
   } else {
     const winnerId = matchCalcState.winners[0];
-    const isWinnerOya = (currentOyaId === winnerId);
-    
+    const isWinnerOya = currentOyaId === winnerId;
+
     let pointsWinnerGets = 0;
     let pointsOyaPays = 0;
     let pointsKoPays = 0;
 
     // 1. 満貫以上の固定点数計算
     if (matchCalcState.scale) {
-      if (matchCalcState.scale === "mangan") pointsWinnerGets = isWinnerOya ? 12000 : 8000;
-      if (matchCalcState.scale === "hanman") pointsWinnerGets = isWinnerOya ? 18000 : 12000;
-      if (matchCalcState.scale === "baiman") pointsWinnerGets = isWinnerOya ? 24000 : 16000;
-      if (matchCalcState.scale === "sanbaiman") pointsWinnerGets = isWinnerOya ? 36000 : 24000;
-      if (matchCalcState.scale === "yakuman") pointsWinnerGets = isWinnerOya ? 48000 : 32000;
+      if (matchCalcState.scale === "mangan")
+        pointsWinnerGets = isWinnerOya ? 12000 : 8000;
+      if (matchCalcState.scale === "hanman")
+        pointsWinnerGets = isWinnerOya ? 18000 : 12000;
+      if (matchCalcState.scale === "baiman")
+        pointsWinnerGets = isWinnerOya ? 24000 : 16000;
+      if (matchCalcState.scale === "sanbaiman")
+        pointsWinnerGets = isWinnerOya ? 36000 : 24000;
+      if (matchCalcState.scale === "yakuman")
+        pointsWinnerGets = isWinnerOya ? 48000 : 32000;
 
       if (matchCalcState.type === "tsumo") {
-        if (isWinnerOya) pointsKoPays = pointsWinnerGets / (appState.tableSize - 1);
-        else { pointsOyaPays = pointsWinnerGets / 2; pointsKoPays = pointsWinnerGets / 4; }
+        if (isWinnerOya)
+          pointsKoPays = pointsWinnerGets / (appState.tableSize - 1);
+        else {
+          pointsOyaPays = pointsWinnerGets / 2;
+          pointsKoPays = pointsWinnerGets / 4;
+        }
       }
     }
     // 2. 符計算を含む満貫未満の点数計算
@@ -970,13 +1065,17 @@ function executePointTransfer() {
       if ((han === 3 && fu >= 60) || (han === 4 && fu >= 30) || han >= 5) {
         pointsWinnerGets = isWinnerOya ? 12000 : 8000;
         if (matchCalcState.type === "tsumo") {
-          if (isWinnerOya) pointsKoPays = pointsWinnerGets / (appState.tableSize - 1);
-          else { pointsOyaPays = pointsWinnerGets / 2; pointsKoPays = pointsWinnerGets / 4; }
+          if (isWinnerOya)
+            pointsKoPays = pointsWinnerGets / (appState.tableSize - 1);
+          else {
+            pointsOyaPays = pointsWinnerGets / 2;
+            pointsKoPays = pointsWinnerGets / 4;
+          }
         }
       } else {
         const baseScore = fu * Math.pow(2, han + 2);
         if (matchCalcState.type === "ron") {
-          const rawScore = isWinnerOya ? (baseScore * 6) : (baseScore * 4);
+          const rawScore = isWinnerOya ? baseScore * 6 : baseScore * 4;
           pointsWinnerGets = Math.ceil(rawScore / 100) * 100;
         } else {
           if (isWinnerOya) {
@@ -985,7 +1084,10 @@ function executePointTransfer() {
           } else {
             pointsOyaPays = Math.ceil((baseScore * 4) / 100) * 100;
             pointsKoPays = Math.ceil((baseScore * 2) / 100) * 100;
-            pointsWinnerGets = pointsOyaPays + (pointsKoPays * (appState.tableSize - 1 - (appState.tableSize === 3 ? 1 : 0)));
+            pointsWinnerGets =
+              pointsOyaPays +
+              pointsKoPays *
+                (appState.tableSize - 1 - (appState.tableSize === 3 ? 1 : 0));
           }
         }
       }
@@ -996,26 +1098,47 @@ function executePointTransfer() {
       const finalGet = pointsWinnerGets + honbaRonValue;
       appState.currentPoints[winnerId] += finalGet;
       appState.currentPoints[matchCalcState.loser] -= finalGet;
-      
+
       // 🚨 ご指定の美しい表示形式に完全に揃えます
-      currentLogObj.rows.push({ type: "ロン和　", name: getPlayerName(winnerId), pt: finalGet });
-      currentLogObj.rows.push({ type: "放銃　　", name: getPlayerName(matchCalcState.loser), pt: -finalGet });
+      currentLogObj.rows.push({
+        type: "ロン和　",
+        name: getPlayerName(winnerId),
+        pt: finalGet,
+      });
+      currentLogObj.rows.push({
+        type: "放銃　　",
+        name: getPlayerName(matchCalcState.loser),
+        pt: -finalGet,
+      });
     } else {
-      const finalGet = pointsWinnerGets + ((appState.tableSize - 1) * honbaTsumoValue);
+      const finalGet =
+        pointsWinnerGets + (appState.tableSize - 1) * honbaTsumoValue;
       appState.currentPoints[winnerId] += finalGet;
-      
-      currentLogObj.rows.push({ type: "ツモ和　", name: getPlayerName(winnerId), pt: finalGet });
+
+      currentLogObj.rows.push({
+        type: "ツモ和　",
+        name: getPlayerName(winnerId),
+        pt: finalGet,
+      });
 
       appState.activePlayers.forEach((pId) => {
         if (pId === winnerId) return;
         if (currentOyaId === pId) {
           const loss = pointsOyaPays + honbaTsumoValue;
           appState.currentPoints[pId] -= loss;
-          currentLogObj.rows.push({ type: "　　　　", name: getPlayerName(pId), pt: -loss });
+          currentLogObj.rows.push({
+            type: "　　　　",
+            name: getPlayerName(pId),
+            pt: -loss,
+          });
         } else {
           const loss = pointsKoPays + honbaTsumoValue;
           appState.currentPoints[pId] -= loss;
-          currentLogObj.rows.push({ type: "　　　　", name: getPlayerName(pId), pt: -loss });
+          currentLogObj.rows.push({
+            type: "　　　　",
+            name: getPlayerName(pId),
+            pt: -loss,
+          });
         }
       });
     }
@@ -1023,14 +1146,20 @@ function executePointTransfer() {
     // 卓上にたまっている供託立直棒の回収
     if (appState.kyotakuCount > 0) {
       appState.currentPoints[winnerId] += appState.kyotakuCount * 1000;
-      currentLogObj.rows.push({ type: "供託回収", name: getPlayerName(winnerId), pt: appState.kyotakuCount * 1000 });
+      currentLogObj.rows.push({
+        type: "供託回収",
+        name: getPlayerName(winnerId),
+        pt: appState.kyotakuCount * 1000,
+      });
       appState.kyotakuCount = 0;
     }
-    
+
     if (isWinnerOya) {
       isRenchan = true;
       appState.honbaCount += 1;
-      alert(`親の和了です！本場を+1します。（現在の本場: ${appState.honbaCount}本場）`);
+      alert(
+        `親の和了です！本場を+1します。（現在の本場: ${appState.honbaCount}本場）`,
+      );
     } else {
       isRenchan = false;
       appState.honbaCount = 0;
@@ -1043,10 +1172,10 @@ function executePointTransfer() {
   // ==========================================================================
   const tobiRuleEl = document.getElementById("rule-tobi");
   const tobiRule = tobiRuleEl ? tobiRuleEl.value : "ari";
-  
+
   let hasTobiPlayer = false;
   let tobiPlayerName = "";
-  
+
   appState.activePlayers.forEach((pId) => {
     if (appState.currentPoints[pId] < 0) {
       hasTobiPlayer = true;
@@ -1058,14 +1187,16 @@ function executePointTransfer() {
   if (tobiRule === "ari" && hasTobiPlayer) {
     currentLogObj.isTobiEnd = true;
     currentLogObj.tobiPlayer = tobiPlayerName;
-    
+
     if (!appState.matchLogs) appState.matchLogs = [];
     appState.matchLogs.push(currentLogObj); // ログを確定させて保存
     saveToLocalStorage();
 
-    alert(`🚨 【ぶっ飛び終了】\n「${tobiPlayerName}」の持ち点が0点未満（マイナス）になったため、ルールによりゲームを強制終了（コールド）します！`);
-    endMatch(); 
-    return;     
+    alert(
+      `🚨 【ぶっ飛び終了】\n「${tobiPlayerName}」の持ち点が0点未満（マイナス）になったため、ルールによりゲームを強制終了（コールド）します！`,
+    );
+    endMatch();
+    return;
   }
 
   // 通常のアガリ・終局でも、ログ配列にしっかり保存
@@ -1080,17 +1211,19 @@ function executePointTransfer() {
   } else {
     const modeSelect = document.getElementById("game-mode-select");
     const modeVal = modeSelect ? modeSelect.value : "4";
-    
+
     if (modeVal === "4-3打ち") {
       const oldOya = appState.activePlayers.shift();
-      const nextInPlayer = appState.subPlayer; 
+      const nextInPlayer = appState.subPlayer;
       appState.subPlayer = oldOya;
       appState.currentKyoku += 1;
       if (appState.currentKyoku > 3) {
         appState.currentKyoku = 1;
         appState.currentWind += 1;
       }
-      alert(`親流れ交代:「${getPlayerName(oldOya)}」が控えへ、お休みの「${getPlayerName(appState.activePlayers)}」が参戦します！`);
+      alert(
+        `親流れ交代:「${getPlayerName(oldOya)}」が控えへ、お休みの「${getPlayerName(appState.activePlayers)}」が参戦します！`,
+      );
     } else {
       const shiftedPlayer = appState.activePlayers.shift();
       appState.activePlayers.push(shiftedPlayer);
@@ -1116,16 +1249,16 @@ function rollDice() {
   const d1 = Math.floor(Math.random() * 6) + 1;
   const d2 = Math.floor(Math.random() * 6) + 1;
   const sum = d1 + d2;
-  
+
   // 画面に流し込むテキストを作成
   const resultText = `出目: ${sum} (${d1}, ${d2})`;
-  
+
   let targetWind = "";
   if ([5, 9].includes(sum)) targetWind = "東家(自家)";
   else if ([2, 6, 10].includes(sum)) targetWind = "南家(右面)";
   else if ([3, 7, 11].includes(sum)) targetWind = "西家(対面)";
   else if ([4, 8, 12].includes(sum)) targetWind = "北家(左面)";
-  
+
   const naviText = `${targetWind}の山、右から${sum}列残して開門`;
 
   // 1. 📱 縦画面用の表示枠（存在する場合のみ安全に書き換え）
@@ -1139,7 +1272,7 @@ function rollDice() {
   // 片方の画面にナビ用の枠がなくてもプログラムがクラッシュせず、出目だけを確実に描画します。
   const lsDiceRes = document.getElementById("ls-dice-result");
   const lsHaipaiNavi = document.getElementById("ls-haipai-navi");
-  
+
   if (lsDiceRes) {
     lsDiceRes.innerText = resultText;
   }
@@ -1171,13 +1304,13 @@ function endMatch() {
 
   const is3人 = appState.tableSize === 3;
   const numPlayers = is3人 ? 3 : 4;
-  
+
   // オカの計算: (返し点 - 持ち点) × 参加人数 / 1000
   const oka = ((baseReturn - startPoints) * numPlayers) / 1000;
 
   const umaRuleEl = document.getElementById("rule-uma");
   const umaRule = umaRuleEl ? umaRuleEl.value : "10-30";
-  
+
   let uma = is3人 ? [10, 0, -10] : [20, 10, -10, -20];
   if (umaRule === "10-30") uma = is3人 ? [20, 0, -20] : [30, 10, -10, -30];
   if (umaRule === "10-20") uma = is3人 ? [10, 0, -10] : [20, 10, -10, -20];
@@ -1192,14 +1325,14 @@ function endMatch() {
     let roundedPt = Math.round(rawPt);
     let finalPt = roundedPt + uma[rank];
     if (rank === 0) finalPt += oka;
-    
+
     calculatedRows.push({
       rank: rank + 1,
       name: getPlayerName(item.id),
       score: item.score,
       pt: finalPt,
     });
-    
+
     if (room.players[item.id]) {
       room.players[item.id].points += finalPt;
       room.players[item.id].totalGames++;
@@ -1225,26 +1358,29 @@ function openStats() {
   const tbody = document.getElementById("stats-table-body");
   if (!tbody) return;
   tbody.innerHTML = "";
-  
-  const room = appState.rooms[appState.currentRoomName] || { gameCount: 0, players: {} };
-  
+
+  const room = appState.rooms[appState.currentRoomName] || {
+    gameCount: 0,
+    players: {},
+  };
+
   let sortedStats = Object.keys(room.players)
     .map((pId) => {
       const p = room.players[pId];
-      return { 
-        id: pId, 
-        name: p.name, 
+      return {
+        id: pId,
+        name: p.name,
         pt: p.points,
-        games: p.totalGames
+        games: p.totalGames,
       };
     })
     .sort((a, b) => b.pt - a.pt);
-    
+
   sortedStats.forEach((item) => {
     const tr = document.createElement("tr");
     const ptClass = item.pt >= 0 ? "pt-plus" : "pt-minus";
     const ptSign = item.pt > 0 ? "+" : "";
-    
+
     tr.innerHTML = `
       <td><strong>${item.name}</strong> <span style="font-size:10px; color:#64748b;">(ID:${item.id})</span></td>
       <td class="text-center font-mono">${item.games}</td>
@@ -1252,12 +1388,12 @@ function openStats() {
     `;
     tbody.appendChild(tr);
   });
-  
+
   const titleEl = document.querySelector("#screen-stats .title");
   if (titleEl) {
     titleEl.innerHTML = `総成績表<div class="subtitle">現在のルーム: ${appState.currentRoomName}</div>`;
   }
-  
+
   const statsScreen = document.getElementById("screen-stats");
   if (statsScreen) statsScreen.classList.remove("hidden");
 }
@@ -1289,7 +1425,11 @@ function switchScreen(fromId, toId) {
 }
 
 function resetAllAppStorageData() {
-  if (confirm("これまでの累積名簿や全ルーム成績を含むすべてのデータを完全にリセットしますか？")) {
+  if (
+    confirm(
+      "これまでの累積名簿や全ルーム成績を含むすべてのデータを完全にリセットしますか？",
+    )
+  ) {
     localStorage.removeItem("mj_manager_state");
     location.reload();
   }
@@ -1304,10 +1444,12 @@ function declareRiichi(pId) {
     alert(`${getPlayerName(pId)} はすでに立直しています。`);
     return;
   }
-  
+
   // 🚨 仕様Aに合わせたチェック：0点未満（マイナス）にはならない「ちょうど1,000点」なら立直可能にする
   if (appState.currentPoints[pId] < 1000) {
-    alert("持ち点が1,000点未満のため立直できません（仕様Aにより1,000点あれば立直して0点続行が可能です）");
+    alert(
+      "持ち点が1,000点未満のため立直できません（仕様Aにより1,000点あれば立直して0点続行が可能です）",
+    );
     return;
   }
 
@@ -1322,8 +1464,12 @@ function declareRiichi(pId) {
 
   // 💻 横画面側の最初から仕込んである赤丸付きの立直棒を「表示」にする
   LANDSCAPE_SEAT_IDS.forEach((seatId, physicalIndex) => {
-    if (appState.tableSize === 3 && physicalIndex === 3 && document.getElementById("game-mode-select").value === "4-3打ち") {
-      return; 
+    if (
+      appState.tableSize === 3 &&
+      physicalIndex === 3 &&
+      document.getElementById("game-mode-select").value === "4-3打ち"
+    ) {
+      return;
     }
     const currentPlayerId = appState.activePlayers[physicalIndex];
     if (currentPlayerId === pId) {
@@ -1352,32 +1498,39 @@ function openCommonLogModal() {
   if (!modal || !listArea) return;
 
   if (!appState.matchLogs || appState.matchLogs.length === 0) {
-    listArea.innerHTML = '<div style="color: #64748b; text-align: center; padding-top: 40px; font-size: 14px;">まだこの半荘の精戦履歴はありません。</div>';
+    listArea.innerHTML =
+      '<div style="color: #64748b; text-align: center; padding-top: 40px; font-size: 14px;">まだこの半荘の精戦履歴はありません。</div>';
   } else {
     // 溜まっている構造化ログデータを時系列（下に追加）のままループ出力
-    listArea.innerHTML = appState.matchLogs.map(log => {
-      let rowsHtml = log.rows.map(r => {
-        const ptClass = r.pt >= 0 ? "log-pt-plus" : "log-pt-minus";
-        const ptSign = r.pt > 0 ? "+" : "";
-        return `
+    listArea.innerHTML = appState.matchLogs
+      .map((log) => {
+        let rowsHtml = log.rows
+          .map((r) => {
+            const ptClass = r.pt >= 0 ? "log-pt-plus" : "log-pt-minus";
+            const ptSign = r.pt > 0 ? "+" : "";
+            return `
           <div class="log-action-row">
-            <span class="log-action-type" style="color:${r.type === '放銃　　' ? '#94a3b8' : '#cbd5e1'};">${r.type}</span>
+            <span class="log-action-type" style="color:${r.type === "放銃　　" ? "#94a3b8" : "#cbd5e1"};">${r.type}</span>
             <span class="log-player-name">${r.name}</span>
             <span class="${ptClass}">${ptSign}${r.pt.toLocaleString()}</span>
           </div>
         `;
-      }).join('');
+          })
+          .join("");
 
-      let tobiHtml = log.isTobiEnd ? `<div class="log-status-tobi">🚨 ぶっ飛び：${log.tobiPlayer}のマイナスによりコールド終局</div>` : '';
+        let tobiHtml = log.isTobiEnd
+          ? `<div class="log-status-tobi">🚨 ぶっ飛び：${log.tobiPlayer}のマイナスによりコールド終局</div>`
+          : "";
 
-      return `
+        return `
         <div class="log-block">
           <div class="log-title-row">${log.title}</div>
           ${rowsHtml}
           ${tobiHtml}
         </div>
       `;
-    }).join('');
+      })
+      .join("");
   }
 
   modal.classList.remove("hidden");

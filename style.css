@@ -617,18 +617,32 @@ body {
 }
 
 .gap-2 {
-  gap: 8px;
+  gap: 4px;
 }
+/* ==========================================================================
+   対局中・直感精算パネルの操作性向上スタイル
+   ========================================================================== */
+
+/* 和了種別（ロン・ツモ・聴牌）ボタン：高さを増やして押しやすく */
 .btn-type {
   flex: 1;
   background-color: #1e293b;
   border: 1px solid #475569;
   color: #cbd5e1;
-  padding: 8px;
+  padding: 10px 4px; /* 上下パディングを拡大 */
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: bold;
   cursor: pointer;
+  min-height: 44px; /* タップターゲットの標準高を確保 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-type.active {
+  background-color: #0ea5e9;
+  border-color: #38bdf8;
+  color: #ffffff;
 }
 .btn-type.active {
   background-color: #0ea5e9;
@@ -650,33 +664,68 @@ body {
   flex-wrap: wrap;
   gap: 6px;
 }
+/* 満貫スケールボタンのボタングリッド */
+.scale-buttons-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+}
+
+/* 基本のスケールボタンスタイル */
 .btn-scale {
   background-color: #1e293b;
   border: 1px solid #334155;
   color: #e2e8f0;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 12px;
+  border-radius: 8px;
   font-weight: bold;
   cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .btn-scale:active,
 .btn-scale.active {
-  background-color: #f59e0b;
-  color: #000;
-  border-color: #fbbf24;
+  background-color: #f59e0b !important;
+  color: #000000 !important;
+  border-color: #fbbf24 !important;
+  font-weight: 900;
 }
 
+/* 翻・符のセレクトボックス：サイズとタップ領域を拡大 */
 .inline-select-sm {
   background-color: #0f172a;
-  border: 1px solid #475569;
+  border: 1.5px solid #475569;
   color: #f8fafc;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 12px;
+  padding: 8px 12px; /* パディングを広げて押しやすく */
+  border-radius: 8px;
+  font-size: 14px;   /* 12pxから拡大 */
   font-weight: 700;
   outline: none;
+  min-height: 40px;
 }
+.inline-select-sm:focus {
+  border-color: #34d399;
+}
+
+/* 満貫・跳満・倍満（少し大きめ：上段に3等分で配置） */
+.btn-scale-lg {
+  flex: 1 1 calc(33.333% - 6px);
+  padding: 10px 4px;
+  font-size: 14px;
+  min-height: 42px;
+}
+
+/* 3倍満・役満（少し小さめ：下段にコンパクトに配置） */
+.btn-scale-sm {
+  flex: 1 1 calc(50% - 6px);
+  padding: 6px 4px;
+  font-size: 12px;
+  color: #94a3b8;
+  min-height: 34px;
+}
+
 .btn-execute {
   width: 100%;
   background-color: #34d399;

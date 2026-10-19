@@ -899,16 +899,20 @@ function setAgariType(type) {
 }
 
 function selectManganScale(scale) {
-  document
-    .querySelectorAll(".btn-scale")
-    .forEach((b) => b.classList.remove("active"));
+  // すべてのスケールボタンのアクティブ解除
+  document.querySelectorAll(".btn-scale").forEach((b) => b.classList.remove("active"));
+  
   if (matchCalcState.scale === scale) {
     matchCalcState.scale = null;
   } else {
     matchCalcState.scale = scale;
-    if (event && event.target) {
-      event.target.classList.add("active");
-    }
+    // 縦画面・横画面双方の該当ボタンを同時にアクティブにする
+    document.querySelectorAll(".btn-scale").forEach((b) => {
+      const onclickAttr = b.getAttribute("onclick") || "";
+      if (onclickAttr.includes(`'${scale}'`)) {
+        b.classList.add("active");
+      }
+    });
   }
 }
 

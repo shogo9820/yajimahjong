@@ -340,25 +340,42 @@
 
             <div id="panel-scale-box" class="mb-3">
               <div class="input-label-sm">【満貫クラス】</div>
-              <div class="flex-wrap-gap">
-                <button onclick="selectManganScale('mangan')" class="btn-scale">
+              <div class="scale-buttons-grid">
+                <!-- 出現頻度が高い3つ：少し大きめ -->
+                <button
+                  type="button"
+                  class="btn-scale btn-scale-lg"
+                  onclick="selectManganScale('mangan')"
+                >
                   満貫
                 </button>
-                <button onclick="selectManganScale('hanman')" class="btn-scale">
+                <button
+                  type="button"
+                  class="btn-scale btn-scale-lg"
+                  onclick="selectManganScale('hanman')"
+                >
                   跳満
                 </button>
-                <button onclick="selectManganScale('baiman')" class="btn-scale">
+                <button
+                  type="button"
+                  class="btn-scale btn-scale-lg"
+                  onclick="selectManganScale('baiman')"
+                >
                   倍満
                 </button>
+
+                <!-- 出現頻度が低い2つ：少し小さめ -->
                 <button
+                  type="button"
+                  class="btn-scale btn-scale-sm"
                   onclick="selectManganScale('sanbaiman')"
-                  class="btn-scale"
                 >
                   3倍満
                 </button>
                 <button
+                  type="button"
+                  class="btn-scale btn-scale-sm"
                   onclick="selectManganScale('yakuman')"
-                  class="btn-scale"
                 >
                   役満
                 </button>
@@ -604,39 +621,42 @@
             </div>
 
             <div id="ls-panel-scale-box" style="margin-bottom: 4px">
-              <div class="flex-wrap-gap" style="gap: 4px">
+              <div class="scale-buttons-grid">
+                <!-- 出現頻度が高い3つ：少し大きめ -->
                 <button
+                  type="button"
+                  class="btn-scale btn-scale-lg"
                   onclick="selectManganScale('mangan')"
-                  class="btn-scale"
-                  style="padding: 4px 6px; font-size: 10px"
                 >
                   満貫
                 </button>
                 <button
+                  type="button"
+                  class="btn-scale btn-scale-lg"
                   onclick="selectManganScale('hanman')"
-                  class="btn-scale"
-                  style="padding: 4px 6px; font-size: 10px"
                 >
                   跳満
                 </button>
                 <button
+                  type="button"
+                  class="btn-scale btn-scale-lg"
                   onclick="selectManganScale('baiman')"
-                  class="btn-scale"
-                  style="padding: 4px 6px; font-size: 10px"
                 >
                   倍満
                 </button>
+
+                <!-- 出現頻度が低い2つ：少し小さめ -->
                 <button
+                  type="button"
+                  class="btn-scale btn-scale-sm"
                   onclick="selectManganScale('sanbaiman')"
-                  class="btn-scale"
-                  style="padding: 4px 6px; font-size: 10px"
                 >
                   3倍満
                 </button>
                 <button
+                  type="button"
+                  class="btn-scale btn-scale-sm"
                   onclick="selectManganScale('yakuman')"
-                  class="btn-scale"
-                  style="padding: 4px 6px; font-size: 10px"
                 >
                   役満
                 </button>

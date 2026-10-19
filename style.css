@@ -617,7 +617,7 @@ body {
 }
 
 .gap-2 {
-  gap: 4px;
+  gap: 2px;
 }
 /* ==========================================================================
    対局中・直感精算パネルの操作性向上スタイル
@@ -703,7 +703,7 @@ body {
   font-size: 14px;   /* 12pxから拡大 */
   font-weight: 700;
   outline: none;
-  min-height: 40px;
+  min-height: 42px;
 }
 .inline-select-sm:focus {
   border-color: #34d399;

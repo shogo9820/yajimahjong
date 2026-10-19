@@ -340,30 +340,28 @@
 
             <div id="panel-detail-box" class="flex gap-2">
               <div class="flex-1">
+                <div class="inline-select-sm">【符】</div>
                 <select
                   id="select-fu"
                   class="inline-select-sm"
                   style="width: 100%"
-                  onchange="
-                    document.getElementById('select-fu').value = this.value
-                  "
                 >
-                  <option value="20">20符</option>
-                  <option value="25">25符</option>
-                  <option value="30" selected>30符</option>
+                  <option value="20">20符（ピンフツモなど）</option>
+                  <option value="25">25符（七対子）</option>
+                  <option value="30" selected>30符（一般的なアガリ）</option>
                   <option value="40">40符</option>
                   <option value="50">50符</option>
                   <option value="60">60符</option>
+                  <option value="70">70符</option>
+                  <option value="80">80符以上</option>
                 </select>
               </div>
               <div class="flex-1">
+                <div class="inline-select-sm">【翻】</div>
                 <select
                   id="select-han"
                   class="inline-select-sm"
                   style="width: 100%"
-                  onchange="
-                    document.getElementById('select-han').value = this.value
-                  "
                 >
                   <option value="1" selected>1翻</option>
                   <option value="2">2翻</option>
@@ -371,7 +369,6 @@
                   <option value="4">4翻</option>
                 </select>
               </div>
-            </div>
             </div>
 
             <div id="panel-scale-box" class="mb-3">

@@ -602,7 +602,6 @@ function updateUIKyokuDisplay() {
   }
 }
 
-// 対局画面の更新（立直棒のHTML生成＆4人3打ち完全対応版）
 function refreshMatchPlayerList() {
   const modeSelect = document.getElementById("game-mode-select");
   const modeVal = modeSelect ? modeSelect.value : "4";
@@ -610,10 +609,13 @@ function refreshMatchPlayerList() {
 
   const pointsEl = document.getElementById("rule-points");
   let defaultPt = 25000;
-  if (pointsEl) {
+  if (pointsEl && pointsEl.value) {
     const parts = pointsEl.value.split("-");
-    defaultPt = parseInt(parts[0]) || 25000;
+    defaultPt = parseInt(parts[0], 10) || 25000;
   }
+
+  // 親の位置（何番目の席の人が親か）：(currentKyoku - 1)
+  const oyaIndex = (appState.currentKyoku - 1) % appState.tableSize;
 
   // 1. 📱 縦持ち用リスト
   const listContainer = document.getElementById("match-players-list");
@@ -621,7 +623,9 @@ function refreshMatchPlayerList() {
     listContainer.innerHTML = "";
     for (let i = 0; i < appState.tableSize; i++) {
       const pId = appState.activePlayers[i];
-      const wind = windLabels[i];
+      // 席iの現在の風を算出
+      const windIdx = (i - oyaIndex + appState.tableSize) % appState.tableSize;
+      const wind = windLabels[windIdx];
       if (appState.currentPoints[pId] === undefined)
         appState.currentPoints[pId] = defaultPt;
 
@@ -646,9 +650,7 @@ function refreshMatchPlayerList() {
     }
   }
 
-  // 2. 💻 横持ち用卓
-  const oyaOffset = (appState.currentKyoku - 1) % 4;
-
+  // 2. 💻 横持ち用卓（席の位置は固定、風バッジだけが親に応じて回る）
   LANDSCAPE_SEAT_IDS.forEach((seatId, physicalIndex) => {
     const seatEl = document.getElementById(seatId);
     if (!seatEl) return;
@@ -684,8 +686,9 @@ function refreshMatchPlayerList() {
     }
 
     seatEl.classList.remove("seat-vacant");
-    const windIndex = (physicalIndex - oyaOffset + 4) % 4;
-    const currentWind = windLabels[windIndex];
+    // 物理席physicalIndexの風を算出（手前=0, 右=1, 奥=2, 左=3）
+    const windIdx = (physicalIndex - oyaIndex + appState.tableSize) % appState.tableSize;
+    const currentWind = windLabels[windIdx];
     const isOya = currentWind === "東";
     const pScore =
       appState.currentPoints[pId] !== undefined
@@ -933,7 +936,6 @@ function clearRoleSlots() {
   setAgariType("ron");
 }
 
-// 🀄 対局結果の点数授受・符計算・本場・【モーダル用構造化ログ & トビA】完全連動関数
 function executePointTransfer() {
   if (matchCalcState.type !== "tenpai" && matchCalcState.winners.length === 0) {
     alert("和了者(アガリ)を設定してください");
@@ -944,14 +946,15 @@ function executePointTransfer() {
     return;
   }
 
-  const currentOyaId = appState.activePlayers[0];
+  // 🚨 現在の親IDを局数から正確に算出（activePlayers[0]固定を撤廃）
+  const oyaSeatIndex = (appState.currentKyoku - 1) % appState.tableSize;
+  const currentOyaId = appState.activePlayers[oyaSeatIndex];
   let isRenchan = false;
 
   const currentHonba = appState.honbaCount;
   const honbaRonValue = currentHonba * 300;
   const honbaTsumoValue = currentHonba * 100;
 
-  // 🚨 新しいログ格納用のオブジェクト構造（ご提示いただいたフォーマットで描画するための設計）
   let currentLogObj = {
     title: `${appState.currentWind === 0 ? "東" : "南"}${appState.currentKyoku}局　${currentHonba}本場`,
     rows: [],
@@ -1001,7 +1004,6 @@ function executePointTransfer() {
         }
       });
     } else {
-      // 全員ノーテンまたは全員テンパイで点数移動がない場合
       allActive.forEach((pId) => {
         currentLogObj.rows.push({
           type: "荒牌　　",
@@ -1022,9 +1024,9 @@ function executePointTransfer() {
       `流局精算を完了しました（本場を+1します。現在の本場: ${appState.honbaCount}本場）`,
     );
 
-    // ==========================================================================
-    // ケース B：誰かが和了（アガリ）した場合
-    // ==========================================================================
+  // ==========================================================================
+  // ケース B：誰かが和了（アガリ）した場合
+  // ==========================================================================
   } else {
     const winnerId = matchCalcState.winners[0];
     const isWinnerOya = currentOyaId === winnerId;
@@ -1059,8 +1061,8 @@ function executePointTransfer() {
     else {
       const hanEl = document.getElementById("select-han");
       const fuEl = document.getElementById("select-fu");
-      const han = hanEl ? parseInt(hanEl.value) : 1;
-      const fu = fuEl ? parseInt(fuEl.value) : 30;
+      const han = hanEl ? parseInt(hanEl.value, 10) : 1;
+      const fu = fuEl ? parseInt(fuEl.value, 10) : 30;
 
       if ((han === 3 && fu >= 60) || (han === 4 && fu >= 30) || han >= 5) {
         pointsWinnerGets = isWinnerOya ? 12000 : 8000;
@@ -1099,7 +1101,6 @@ function executePointTransfer() {
       appState.currentPoints[winnerId] += finalGet;
       appState.currentPoints[matchCalcState.loser] -= finalGet;
 
-      // 🚨 ご指定の美しい表示形式に完全に揃えます
       currentLogObj.rows.push({
         type: "ロン和　",
         name: getPlayerName(winnerId),
@@ -1143,7 +1144,6 @@ function executePointTransfer() {
       });
     }
 
-    // 卓上にたまっている供託立直棒の回収
     if (appState.kyotakuCount > 0) {
       appState.currentPoints[winnerId] += appState.kyotakuCount * 1000;
       currentLogObj.rows.push({
@@ -1168,7 +1168,7 @@ function executePointTransfer() {
   }
 
   // ==========================================================================
-  // 🚨 仕様A：トビ（ぶっ飛び）ルールの判定処理
+  // トビルール判定
   // ==========================================================================
   const tobiRuleEl = document.getElementById("rule-tobi");
   const tobiRule = tobiRuleEl ? tobiRuleEl.value : "ari";
@@ -1183,13 +1183,12 @@ function executePointTransfer() {
     }
   });
 
-  // 🚨 最後に飛んだ場合も確実にログオブジェクトに記録を刻みつける
   if (tobiRule === "ari" && hasTobiPlayer) {
     currentLogObj.isTobiEnd = true;
     currentLogObj.tobiPlayer = tobiPlayerName;
 
     if (!appState.matchLogs) appState.matchLogs = [];
-    appState.matchLogs.push(currentLogObj); // ログを確定させて保存
+    appState.matchLogs.push(currentLogObj);
     saveToLocalStorage();
 
     alert(
@@ -1199,12 +1198,11 @@ function executePointTransfer() {
     return;
   }
 
-  // 通常のアガリ・終局でも、ログ配列にしっかり保存
   if (!appState.matchLogs) appState.matchLogs = [];
   appState.matchLogs.push(currentLogObj);
 
   // ==========================================================================
-  // 3. 親移動・抜け番交代の実行判定（飛びが無かった場合のみ続行）
+  // 3. 親移動の処理（席は固定のまま、局数だけを進める）
   // ==========================================================================
   if (isRenchan) {
     alert("親の連荘です！次局も同じ親で続行します。");
@@ -1213,27 +1211,28 @@ function executePointTransfer() {
     const modeVal = modeSelect ? modeSelect.value : "4";
 
     if (modeVal === "4-3打ち") {
-      const oldOya = appState.activePlayers.shift();
-      const nextInPlayer = appState.subPlayer;
+      // 4人3打ちは親番が終わった人が控えと入れ替わる
+      const currentOyaIndex = (appState.currentKyoku - 1) % 3;
+      const oldOya = appState.activePlayers[currentOyaIndex];
+      const nextIn = appState.subPlayer;
+      appState.activePlayers[currentOyaIndex] = nextIn;
       appState.subPlayer = oldOya;
+
       appState.currentKyoku += 1;
       if (appState.currentKyoku > 3) {
         appState.currentKyoku = 1;
         appState.currentWind += 1;
       }
-      alert(
-        `親流れ交代:「${getPlayerName(oldOya)}」が控えへ、お休みの「${getPlayerName(appState.activePlayers)}」が参戦します！`,
-      );
+      alert(`親流れ交代:「${getPlayerName(oldOya)}」が控えへ、「${getPlayerName(nextIn)}」が参戦します！`);
     } else {
-      const shiftedPlayer = appState.activePlayers.shift();
-      appState.activePlayers.push(shiftedPlayer);
+      // 通常4人打ち/3人打ち：席は固定のまま、局数のみインクリメント
       appState.currentKyoku += 1;
       const maxKyoku = appState.tableSize === 3 ? 3 : 4;
       if (appState.currentKyoku > maxKyoku) {
         appState.currentKyoku = 1;
         appState.currentWind += 1;
       }
-      alert("親が流れました。次局へ移ります。");
+      alert("親が流れて次局へ移ります。");
     }
   }
 

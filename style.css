@@ -1471,3 +1471,117 @@ body {
     border-radius: 10px !important;
   }
 }
+
+/* ==========================================================================
+   点数移動モーダル用スタイル
+   ========================================================================== */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.modal-card {
+  background-color: #1e293b;
+  border: 2px solid #334155;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 360px;
+  padding: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modal-header {
+  border-bottom: 1px solid #334155;
+  padding-bottom: 8px;
+  text-align: center;
+}
+
+.modal-title {
+  font-size: 16px;
+  font-weight: 900;
+  color: #fbbf24;
+}
+
+.transfer-subtitle {
+  text-align: center;
+  font-size: 15px;
+  font-weight: 800;
+  color: #38bdf8;
+}
+
+.transfer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background-color: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.transfer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+
+.transfer-player-name {
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.transfer-pt-plus {
+  color: #34d399;
+  font-family: monospace;
+  font-weight: 900;
+  font-size: 16px;
+}
+
+.transfer-pt-minus {
+  color: #f43f5e;
+  font-family: monospace;
+  font-weight: 900;
+  font-size: 16px;
+}
+
+.transfer-pt-zero {
+  color: #94a3b8;
+  font-family: monospace;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.transfer-extra-info {
+  font-size: 12px;
+  color: #94a3b8;
+  text-align: center;
+  line-height: 1.5;
+  background-color: rgba(51, 65, 85, 0.2);
+  border-radius: 6px;
+  padding: 6px;
+}
+
+.modal-footer {
+  margin-top: 4px;
+}
+
+.modal-footer .btn {
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 800;
+  border-radius: 10px;
+}

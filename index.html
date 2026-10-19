@@ -795,7 +795,7 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- 📜 共通対局精算ログ履歴モーダル               -->
+    <!-- 📜 共通対局精算ログ履歴モーダル              -->
     <!-- ========================================== -->
     <div
       id="common-log-modal"
@@ -825,6 +825,40 @@
         >
           閉じる
         </button>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 🀄 点数移動ポップアップモーダル              -->
+    <!-- ========================================== -->
+
+    <div id="transfer-result-modal" class="modal-backdrop hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <span id="transfer-modal-title" class="modal-title"
+            >東1局 0本場 精算</span
+          >
+        </div>
+
+        <!-- 和了役・役職表示（例：ロン和了 / 満貫 8,000点） -->
+        <div id="transfer-modal-subtitle" class="transfer-subtitle"></div>
+
+        <!-- 点数移動リスト（誰が＋で誰がーか） -->
+        <div id="transfer-modal-list" class="transfer-list"></div>
+
+        <!-- 供託・本場などの付加情報 -->
+        <div id="transfer-modal-extra" class="transfer-extra-info"></div>
+
+        <!-- 次の局へ進む確定ボタン -->
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-emerald"
+            onclick="confirmPointTransferNext()"
+          >
+            次局へ進む
+          </button>
+        </div>
       </div>
     </div>
 

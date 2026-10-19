@@ -950,7 +950,6 @@ function executePointTransfer() {
     return;
   }
 
-  // 🚨 現在の親IDを局数から正確に算出（activePlayers[0]固定を撤廃）
   const oyaSeatIndex = (appState.currentKyoku - 1) % appState.tableSize;
   const currentOyaId = appState.activePlayers[oyaSeatIndex];
   let isRenchan = false;
@@ -966,10 +965,15 @@ function executePointTransfer() {
     tobiPlayer: "",
   };
 
-  // ==========================================================================
-  // ケース A：流局（テンパイ実行）の場合
-  // ==========================================================================
+  let modalSubtitle = "";
+  let modalExtraInfo = "";
+  let diffList = [];
+
+  // --------------------------------------------------------------------------
+  // A. 流局（聴牌）
+  // --------------------------------------------------------------------------
   if (matchCalcState.type === "tenpai") {
+    modalSubtitle = "荒牌流局（ノーテン罰符）";
     const tenpaiCount = matchCalcState.winners.length;
     const allActive = appState.activePlayers;
     const noTenCount = allActive.length - tenpaiCount;
@@ -977,106 +981,68 @@ function executePointTransfer() {
     if (tenpaiCount > 0 && noTenCount > 0) {
       let plusScore = 0;
       let minusScore = 0;
-      if (tenpaiCount === 1) {
-        plusScore = 3000;
-        minusScore = 3000 / noTenCount;
-      }
-      if (tenpaiCount === 2) {
-        plusScore = 1500;
-        minusScore = 1500;
-      }
-      if (tenpaiCount === 3) {
-        plusScore = 1000;
-        minusScore = 3000;
-      }
+      if (tenpaiCount === 1) { plusScore = 3000; minusScore = 3000 / noTenCount; }
+      if (tenpaiCount === 2) { plusScore = 1500; minusScore = 1500; }
+      if (tenpaiCount === 3) { plusScore = 1000; minusScore = 3000; }
 
       allActive.forEach((pId) => {
         if (matchCalcState.winners.includes(pId)) {
           appState.currentPoints[pId] += plusScore;
-          currentLogObj.rows.push({
-            type: "荒牌　　",
-            name: getPlayerName(pId),
-            pt: plusScore,
-          });
+          currentLogObj.rows.push({ type: "荒牌　　", name: getPlayerName(pId), pt: plusScore });
+          diffList.push({ name: getPlayerName(pId), diff: plusScore });
         } else {
           appState.currentPoints[pId] -= minusScore;
-          currentLogObj.rows.push({
-            type: "　　　　",
-            name: getPlayerName(pId),
-            pt: -minusScore,
-          });
+          currentLogObj.rows.push({ type: "　　　　", name: getPlayerName(pId), pt: -minusScore });
+          diffList.push({ name: getPlayerName(pId), diff: -minusScore });
         }
       });
     } else {
       allActive.forEach((pId) => {
-        currentLogObj.rows.push({
-          type: "荒牌　　",
-          name: getPlayerName(pId),
-          pt: 0,
-        });
+        currentLogObj.rows.push({ type: "荒牌　　", name: getPlayerName(pId), pt: 0 });
+        diffList.push({ name: getPlayerName(pId), diff: 0 });
       });
+      modalExtraInfo = "全員聴牌、または全員不聴（点数移動なし）";
     }
 
-    if (matchCalcState.winners.includes(currentOyaId)) {
-      isRenchan = true;
-    } else {
-      isRenchan = false;
-    }
-
+    isRenchan = matchCalcState.winners.includes(currentOyaId);
     appState.honbaCount += 1;
-    alert(
-      `流局精算を完了しました（本場を+1します。現在の本場: ${appState.honbaCount}本場）`,
-    );
+    modalExtraInfo += (modalExtraInfo ? "<br>" : "") + `本場を+1します（現在: ${appState.honbaCount}本場）`;
 
-  // ==========================================================================
-  // ケース B：誰かが和了（アガリ）した場合
-  // ==========================================================================
+  // --------------------------------------------------------------------------
+  // B. 和了（ロン・ツモ）
+  // --------------------------------------------------------------------------
   } else {
     const winnerId = matchCalcState.winners[0];
     const isWinnerOya = currentOyaId === winnerId;
-
     let pointsWinnerGets = 0;
     let pointsOyaPays = 0;
     let pointsKoPays = 0;
 
-    // 1. 満貫以上の固定点数計算
     if (matchCalcState.scale) {
-      if (matchCalcState.scale === "mangan")
-        pointsWinnerGets = isWinnerOya ? 12000 : 8000;
-      if (matchCalcState.scale === "hanman")
-        pointsWinnerGets = isWinnerOya ? 18000 : 12000;
-      if (matchCalcState.scale === "baiman")
-        pointsWinnerGets = isWinnerOya ? 24000 : 16000;
-      if (matchCalcState.scale === "sanbaiman")
-        pointsWinnerGets = isWinnerOya ? 36000 : 24000;
-      if (matchCalcState.scale === "yakuman")
-        pointsWinnerGets = isWinnerOya ? 48000 : 32000;
+      const scaleNames = { mangan: "満貫", hanman: "跳満", baiman: "倍満", sanbaiman: "三倍満", yakuman: "役満" };
+      modalSubtitle = `${matchCalcState.type === "ron" ? "ロン和了" : "ツモ和了"}（${scaleNames[matchCalcState.scale]}）`;
+      if (matchCalcState.scale === "mangan") pointsWinnerGets = isWinnerOya ? 12000 : 8000;
+      if (matchCalcState.scale === "hanman") pointsWinnerGets = isWinnerOya ? 18000 : 12000;
+      if (matchCalcState.scale === "baiman") pointsWinnerGets = isWinnerOya ? 24000 : 16000;
+      if (matchCalcState.scale === "sanbaiman") pointsWinnerGets = isWinnerOya ? 36000 : 24000;
+      if (matchCalcState.scale === "yakuman") pointsWinnerGets = isWinnerOya ? 48000 : 32000;
 
       if (matchCalcState.type === "tsumo") {
-        if (isWinnerOya)
-          pointsKoPays = pointsWinnerGets / (appState.tableSize - 1);
-        else {
-          pointsOyaPays = pointsWinnerGets / 2;
-          pointsKoPays = pointsWinnerGets / 4;
-        }
+        if (isWinnerOya) pointsKoPays = pointsWinnerGets / (appState.tableSize - 1);
+        else { pointsOyaPays = pointsWinnerGets / 2; pointsKoPays = pointsWinnerGets / 4; }
       }
-    }
-    // 2. 符計算を含む満貫未満の点数計算
-    else {
+    } else {
       const hanEl = document.getElementById("select-han");
       const fuEl = document.getElementById("select-fu");
       const han = hanEl ? parseInt(hanEl.value, 10) : 1;
       const fu = fuEl ? parseInt(fuEl.value, 10) : 30;
+      modalSubtitle = `${matchCalcState.type === "ron" ? "ロン和了" : "ツモ和了"}（${han}翻 ${fu}符）`;
 
       if ((han === 3 && fu >= 60) || (han === 4 && fu >= 30) || han >= 5) {
         pointsWinnerGets = isWinnerOya ? 12000 : 8000;
         if (matchCalcState.type === "tsumo") {
-          if (isWinnerOya)
-            pointsKoPays = pointsWinnerGets / (appState.tableSize - 1);
-          else {
-            pointsOyaPays = pointsWinnerGets / 2;
-            pointsKoPays = pointsWinnerGets / 4;
-          }
+          if (isWinnerOya) pointsKoPays = pointsWinnerGets / (appState.tableSize - 1);
+          else { pointsOyaPays = pointsWinnerGets / 2; pointsKoPays = pointsWinnerGets / 4; }
         }
       } else {
         const baseScore = fu * Math.pow(2, han + 2);
@@ -1090,96 +1056,62 @@ function executePointTransfer() {
           } else {
             pointsOyaPays = Math.ceil((baseScore * 4) / 100) * 100;
             pointsKoPays = Math.ceil((baseScore * 2) / 100) * 100;
-            pointsWinnerGets =
-              pointsOyaPays +
-              pointsKoPays *
-                (appState.tableSize - 1 - (appState.tableSize === 3 ? 1 : 0));
+            pointsWinnerGets = pointsOyaPays + pointsKoPays * (appState.tableSize - 1 - (appState.tableSize === 3 ? 1 : 0));
           }
         }
       }
     }
 
-    // 3. 実際の点数移動の実行（基本点 ＋ 本場代の加算授受）
     if (matchCalcState.type === "ron") {
       const finalGet = pointsWinnerGets + honbaRonValue;
       appState.currentPoints[winnerId] += finalGet;
       appState.currentPoints[matchCalcState.loser] -= finalGet;
 
-      currentLogObj.rows.push({
-        type: "ロン和　",
-        name: getPlayerName(winnerId),
-        pt: finalGet,
-      });
-      currentLogObj.rows.push({
-        type: "放銃　　",
-        name: getPlayerName(matchCalcState.loser),
-        pt: -finalGet,
-      });
-    } else {
-      const finalGet =
-        pointsWinnerGets + (appState.tableSize - 1) * honbaTsumoValue;
-      appState.currentPoints[winnerId] += finalGet;
+      currentLogObj.rows.push({ type: "ロン和　", name: getPlayerName(winnerId), pt: finalGet });
+      currentLogObj.rows.push({ type: "放銃　　", name: getPlayerName(matchCalcState.loser), pt: -finalGet });
 
-      currentLogObj.rows.push({
-        type: "ツモ和　",
-        name: getPlayerName(winnerId),
-        pt: finalGet,
-      });
+      diffList.push({ name: getPlayerName(winnerId), diff: finalGet });
+      diffList.push({ name: getPlayerName(matchCalcState.loser), diff: -finalGet });
+    } else {
+      const finalGet = pointsWinnerGets + (appState.tableSize - 1) * honbaTsumoValue;
+      appState.currentPoints[winnerId] += finalGet;
+      currentLogObj.rows.push({ type: "ツモ和　", name: getPlayerName(winnerId), pt: finalGet });
+      diffList.push({ name: getPlayerName(winnerId), diff: finalGet });
 
       appState.activePlayers.forEach((pId) => {
         if (pId === winnerId) return;
-        if (currentOyaId === pId) {
-          const loss = pointsOyaPays + honbaTsumoValue;
-          appState.currentPoints[pId] -= loss;
-          currentLogObj.rows.push({
-            type: "　　　　",
-            name: getPlayerName(pId),
-            pt: -loss,
-          });
-        } else {
-          const loss = pointsKoPays + honbaTsumoValue;
-          appState.currentPoints[pId] -= loss;
-          currentLogObj.rows.push({
-            type: "　　　　",
-            name: getPlayerName(pId),
-            pt: -loss,
-          });
-        }
+        const loss = (currentOyaId === pId ? pointsOyaPays : pointsKoPays) + honbaTsumoValue;
+        appState.currentPoints[pId] -= loss;
+        currentLogObj.rows.push({ type: "　　　　", name: getPlayerName(pId), pt: -loss });
+        diffList.push({ name: getPlayerName(pId), diff: -loss });
       });
     }
 
     if (appState.kyotakuCount > 0) {
-      appState.currentPoints[winnerId] += appState.kyotakuCount * 1000;
-      currentLogObj.rows.push({
-        type: "供託回収",
-        name: getPlayerName(winnerId),
-        pt: appState.kyotakuCount * 1000,
-      });
+      const kPt = appState.kyotakuCount * 1000;
+      appState.currentPoints[winnerId] += kPt;
+      currentLogObj.rows.push({ type: "供託回収", name: getPlayerName(winnerId), pt: kPt });
+      modalExtraInfo += `供託棒 ${appState.kyotakuCount}本（+${kPt.toLocaleString()}点）を獲得<br>`;
       appState.kyotakuCount = 0;
     }
 
     if (isWinnerOya) {
       isRenchan = true;
       appState.honbaCount += 1;
-      alert(
-        `親の和了です！本場を+1します。（現在の本場: ${appState.honbaCount}本場）`,
-      );
+      modalExtraInfo += `親の和了（連荘）本場+1 ➔ ${appState.honbaCount}本場`;
     } else {
       isRenchan = false;
       appState.honbaCount = 0;
-      alert("子のアガリです。本場を0にリセットします。");
+      modalExtraInfo += `子のアガリ（本場リセット ➔ 0本場）`;
     }
   }
 
-  // ==========================================================================
-  // トビルール判定
-  // ==========================================================================
-  const tobiRuleEl = document.getElementById("rule-tobi");
-  const tobiRule = tobiRuleEl ? tobiRuleEl.value : "ari";
-
+  // --------------------------------------------------------------------------
+  // C. 飛び判定
+  // --------------------------------------------------------------------------
+  const tobiRule = document.getElementById("rule-tobi") ? document.getElementById("rule-tobi").value : "ari";
   let hasTobiPlayer = false;
   let tobiPlayerName = "";
-
   appState.activePlayers.forEach((pId) => {
     if (appState.currentPoints[pId] < 0) {
       hasTobiPlayer = true;
@@ -1187,64 +1119,60 @@ function executePointTransfer() {
     }
   });
 
+  if (!appState.matchLogs) appState.matchLogs = [];
   if (tobiRule === "ari" && hasTobiPlayer) {
     currentLogObj.isTobiEnd = true;
     currentLogObj.tobiPlayer = tobiPlayerName;
-
-    if (!appState.matchLogs) appState.matchLogs = [];
     appState.matchLogs.push(currentLogObj);
     saveToLocalStorage();
 
-    alert(
-      `🚨 【ぶっ飛び終了】\n「${tobiPlayerName}」の持ち点が0点未満（マイナス）になったため、ルールによりゲームを強制終了（コールド）します！`,
+    modalExtraInfo += `<br><span style="color:#f43f5e;font-weight:bold;">🚨 ぶっ飛び：${tobiPlayerName}が0点未満のためコールド終局</span>`;
+    showTransferResultModal(
+      `${appState.currentWind === 0 ? "東" : "南"}${appState.currentKyoku}局 精算`,
+      modalSubtitle,
+      diffList,
+      modalExtraInfo,
+      () => { endMatch(); }
     );
-    endMatch();
     return;
   }
 
-  if (!appState.matchLogs) appState.matchLogs = [];
   appState.matchLogs.push(currentLogObj);
 
-  // ==========================================================================
-  // 3. 親移動の処理（席は固定のまま、局数だけを進める）
-  // ==========================================================================
-  if (isRenchan) {
-    alert("親の連荘です！次局も同じ親で続行します。");
-  } else {
-    const modeSelect = document.getElementById("game-mode-select");
-    const modeVal = modeSelect ? modeSelect.value : "4";
+  // --------------------------------------------------------------------------
+  // D. モーダル表示と「次局へ進む」のコールバック登録
+  // --------------------------------------------------------------------------
+  const modalTitle = `${appState.currentWind === 0 ? "東" : "南"}${appState.currentKyoku}局 ${currentHonba}本場 精算`;
 
-    if (modeVal === "4-3打ち") {
-      // 4人3打ちは親番が終わった人が控えと入れ替わる
-      const currentOyaIndex = (appState.currentKyoku - 1) % 3;
-      const oldOya = appState.activePlayers[currentOyaIndex];
-      const nextIn = appState.subPlayer;
-      appState.activePlayers[currentOyaIndex] = nextIn;
-      appState.subPlayer = oldOya;
-
-      appState.currentKyoku += 1;
-      if (appState.currentKyoku > 3) {
-        appState.currentKyoku = 1;
-        appState.currentWind += 1;
+  showTransferResultModal(modalTitle, modalSubtitle, diffList, modalExtraInfo, () => {
+    if (!isRenchan) {
+      const modeVal = document.getElementById("game-mode-select") ? document.getElementById("game-mode-select").value : "4";
+      if (modeVal === "4-3打ち") {
+        const currentOyaIndex = (appState.currentKyoku - 1) % 3;
+        const oldOya = appState.activePlayers[currentOyaIndex];
+        appState.activePlayers[currentOyaIndex] = appState.subPlayer;
+        appState.subPlayer = oldOya;
+        appState.currentKyoku += 1;
+        if (appState.currentKyoku > 3) {
+          appState.currentKyoku = 1;
+          appState.currentWind += 1;
+        }
+      } else {
+        appState.currentKyoku += 1;
+        const maxKyoku = appState.tableSize === 3 ? 3 : 4;
+        if (appState.currentKyoku > maxKyoku) {
+          appState.currentKyoku = 1;
+          appState.currentWind += 1;
+        }
       }
-      alert(`親流れ交代:「${getPlayerName(oldOya)}」が控えへ、「${getPlayerName(nextIn)}」が参戦します！`);
-    } else {
-      // 通常4人打ち/3人打ち：席は固定のまま、局数のみインクリメント
-      appState.currentKyoku += 1;
-      const maxKyoku = appState.tableSize === 3 ? 3 : 4;
-      if (appState.currentKyoku > maxKyoku) {
-        appState.currentKyoku = 1;
-        appState.currentWind += 1;
-      }
-      alert("親が流れて次局へ移ります。");
     }
-  }
 
-  appState.riichiPlayers = [];
-  updateUIKyokuDisplay();
-  refreshMatchPlayerList();
-  clearRoleSlots();
-  saveToLocalStorage();
+    appState.riichiPlayers = [];
+    updateUIKyokuDisplay();
+    refreshMatchPlayerList();
+    clearRoleSlots();
+    saveToLocalStorage();
+  });
 }
 
 // 縦画面・横画面どちらのサイコロボタンを押してもエラーを出さずにリアルタイム同期する関数
@@ -1548,4 +1476,58 @@ function openCommonLogModal() {
 function closeCommonLogModal() {
   const modal = document.getElementById("common-log-modal");
   if (modal) modal.classList.add("hidden");
+}
+
+// ==========================================================
+// 🀄 点数移動モーダル制御
+// ==========================================================
+let pendingNextRoundCallback = null;
+
+function confirmPointTransferNext() {
+  const modal = document.getElementById("transfer-result-modal");
+  if (modal) modal.classList.add("hidden");
+
+  if (typeof pendingNextRoundCallback === "function") {
+    pendingNextRoundCallback();
+    pendingNextRoundCallback = null;
+  }
+}
+
+function showTransferResultModal(title, subtitle, diffList, extraInfo, onNext) {
+  const modal = document.getElementById("transfer-result-modal");
+  const titleEl = document.getElementById("transfer-modal-title");
+  const subEl = document.getElementById("transfer-modal-subtitle");
+  const listEl = document.getElementById("transfer-modal-list");
+  const extraEl = document.getElementById("transfer-modal-extra");
+
+  if (!modal || !listEl) return;
+
+  if (titleEl) titleEl.innerText = title;
+  if (subEl) subEl.innerText = subtitle;
+
+  listEl.innerHTML = diffList.map(item => {
+    let ptClass = "transfer-pt-zero";
+    let ptSign = "";
+    if (item.diff > 0) {
+      ptClass = "transfer-pt-plus";
+      ptSign = "+";
+    } else if (item.diff < 0) {
+      ptClass = "transfer-pt-minus";
+    }
+
+    return `
+      <div class="transfer-row">
+        <span class="transfer-player-name">${item.name}</span>
+        <span class="${ptClass}">${ptSign}${item.diff.toLocaleString()} 点</span>
+      </div>
+    `;
+  }).join("");
+
+  if (extraEl) {
+    extraEl.innerHTML = extraInfo || "";
+    extraEl.style.display = extraInfo ? "block" : "none";
+  }
+
+  pendingNextRoundCallback = onNext;
+  modal.classList.remove("hidden");
 }

@@ -7,8 +7,18 @@ if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
       .register("sw.js")
-      .then((reg) => console.log("PWA Service Worker 登録成功!", reg))
+      .then((reg) => {
+        reg.update();
+        console.log("PWA Service Worker 登録成功!", reg);
+      })
       .catch((err) => console.log("PWA Service Worker 登録失敗...", err));
+  });
+
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
   });
 }
 

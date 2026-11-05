@@ -1647,3 +1647,89 @@ body,
   }
 }
 
+/* ==========================================================================
+   追加機能用スタイル（Undoボタン・特殊タブ・W役満3列・成績詳細テーブル）
+   ========================================================================== */
+.btn-undo-header {
+  background-color: #334155;
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-undo-header:active {
+  transform: scale(0.96);
+}
+.ls-undo-btn {
+  padding: 3px 6px !important;
+  font-size: 10px !important;
+}
+
+.btn-type.active-special {
+  background-color: #7c3aed;
+  border-color: #a78bfa;
+  color: #ffffff;
+}
+
+.btn-scale-sm3 {
+  flex: 1 1 calc(33.333% - 6px);
+  padding: 6px 4px;
+  font-size: 12px;
+  color: #94a3b8;
+  min-height: 32px;
+}
+
+.special-actions-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+.ls-special-box {
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.btn-special-action {
+  width: 100%;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 8px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  text-align: center;
+}
+.ls-special-box .btn-special-action {
+  padding: 7px 6px;
+  font-size: 11px;
+}
+.btn-special-amber {
+  background-color: #f59e0b;
+  color: #451a03;
+}
+.btn-special-sky {
+  background-color: #0ea5e9;
+  color: #082f49;
+}
+.btn-special-rose {
+  background-color: #f43f5e;
+  color: #ffffff;
+}
+
+.stats-rank-num {
+  color: #94a3b8;
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+.stats-detail-table th,
+.stats-detail-table td {
+  padding: 8px 6px !important;
+  font-size: 12px !important;
+}
+
+

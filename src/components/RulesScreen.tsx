@@ -389,6 +389,23 @@ export const RulesScreen: React.FC<RulesScreenProps> = ({
                     </select>
                   </div>
                   <div className="table-row-flex">
+                    <span>同点時の処理</span>
+                    <select
+                      id="rule-tie"
+                      className="inline-select"
+                      value={rules.tieBreaker}
+                      onChange={(e) =>
+                        onUpdateRules({
+                          tieBreaker:
+                            e.target.value as CustomRules["tieBreaker"],
+                        })
+                      }
+                    >
+                      <option value="kamicha">起家優先</option>
+                      <option value="split">ウマ・オカ折半</option>
+                    </select>
+                  </div>
+                  <div className="table-row-flex">
                     <span>連荘条件</span>
                     <select
                       id="rule-renchan"
@@ -418,6 +435,40 @@ export const RulesScreen: React.FC<RulesScreenProps> = ({
                     >
                       <option value="ari">あり（マイナスで即終了）</option>
                       <option value="nashi">なし（マイナスでも続行）</option>
+                    </select>
+                  </div>
+                  <div className="table-row-flex">
+                    <span>3麻ツモ計算</span>
+                    <select
+                      id="rule-sanma-tsumo"
+                      className="inline-select"
+                      value={rules.sanmaTsumo}
+                      onChange={(e) =>
+                        onUpdateRules({
+                          sanmaTsumo:
+                            e.target.value as CustomRules["sanmaTsumo"],
+                        })
+                      }
+                    >
+                      <option value="tsumozon">ツモ損あり</option>
+                      <option value="marutori">ツモ損なし（丸取り）</option>
+                    </select>
+                  </div>
+                  <div className="table-row-flex">
+                    <span>3麻ノーテン罰符</span>
+                    <select
+                      id="rule-sanma-noten"
+                      className="inline-select"
+                      value={rules.sanmaNoten}
+                      onChange={(e) =>
+                        onUpdateRules({
+                          sanmaNoten:
+                            e.target.value as CustomRules["sanmaNoten"],
+                        })
+                      }
+                    >
+                      <option value="3000">場3,000点（±1500/3000）</option>
+                      <option value="2000">場2,000点（±1000/2000）</option>
                     </select>
                   </div>
                   <div className="table-row-flex">
@@ -491,4 +542,3 @@ export const RulesScreen: React.FC<RulesScreenProps> = ({
     </div>
   );
 };
-

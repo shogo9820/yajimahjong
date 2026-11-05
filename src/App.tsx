@@ -2,10 +2,13 @@ import React, { useEffect, useState } from "react";
 import {
   AppState,
   CustomRules,
+  ManganScale,
   MatchCalcState,
+  MatchHistoryEntry,
   MatchLog,
   ResultRow,
   Room,
+  RoundSnapshot,
   TransferDiffItem,
   TransferModalData,
   WIND_LABELS,
@@ -28,6 +31,9 @@ const DEFAULT_RULES: CustomRules = {
   renchan: "tenpai",
   tobi: "ari",
   kuitan: "ariari",
+  tieBreaker: "kamicha",
+  sanmaTsumo: "tsumozon",
+  sanmaNoten: "3000",
 };
 
 const INITIAL_MATCH_CALC: MatchCalcState = {
@@ -48,6 +54,7 @@ function createInitialState(): AppState {
         nextPlayerId: 1,
         players: {},
         playerGames: {},
+        matchHistory: [],
       },
     },
     currentRoomName: "デフォルトルーム",
@@ -65,6 +72,7 @@ function createInitialState(): AppState {
     currentScreen: "screen-register",
     rules: { ...DEFAULT_RULES },
     matchLogs: [],
+    roundHistory: [],
     lastResultRows: [],
     dice: {
       resultText: "出目: --",
@@ -88,13 +96,20 @@ function loadStateFromStorage(): AppState {
         nextPlayerId: 1,
         players: {},
         playerGames: {},
+        matchHistory: [],
       };
     }
 
-    // 各ルームのプレイヤー辞書を正規化
     Object.keys(rooms).forEach((rKey) => {
       const r = rooms[rKey];
       if (!r.players) r.players = {};
+      if (!Array.isArray(r.matchHistory)) r.matchHistory = [];
+      Object.keys(r.players).forEach((pKey) => {
+        const p = r.players[Number(pKey)];
+        if (p && !Array.isArray(p.rankCounts)) {
+          p.rankCounts = [0, 0, 0, 0];
+        }
+      });
       if (!r.nextPlayerId) {
         const maxId = Object.keys(r.players).reduce(
           (acc, k) => Math.max(acc, Number(k) || 0),
@@ -166,6 +181,9 @@ function loadStateFromStorage(): AppState {
       currentScreen: parsed.currentScreen || "screen-register",
       rules,
       matchLogs: Array.isArray(parsed.matchLogs) ? parsed.matchLogs : [],
+      roundHistory: Array.isArray(parsed.roundHistory)
+        ? parsed.roundHistory
+        : [],
       lastResultRows: Array.isArray(parsed.lastResultRows)
         ? parsed.lastResultRows
         : [],
@@ -175,6 +193,126 @@ function loadStateFromStorage(): AppState {
     console.error("データ復元エラー。初期画面で起動します。", e);
     return base;
   }
+}
+
+function calcHandPoints(
+  isWinnerOya: boolean,
+  type: "ron" | "tsumo",
+  scale: ManganScale,
+  han: number,
+  fu: number,
+  tableSize: number,
+  sanmaTsumo: "tsumozon" | "marutori"
+): {
+  pointsWinnerGets: number;
+  pointsOyaPays: number;
+  pointsKoPays: number;
+} {
+  let pointsWinnerGets = 0;
+  let pointsOyaPays = 0;
+  let pointsKoPays = 0;
+
+  const isManganOrAbove =
+    scale !== null ||
+    (han === 3 && fu >= 60) ||
+    (han === 4 && fu >= 30) ||
+    han >= 5;
+
+  if (isManganOrAbove) {
+    const effScale = scale || "mangan";
+    if (effScale === "mangan") pointsWinnerGets = isWinnerOya ? 12000 : 8000;
+    else if (effScale === "hanman")
+      pointsWinnerGets = isWinnerOya ? 18000 : 12000;
+    else if (effScale === "baiman")
+      pointsWinnerGets = isWinnerOya ? 24000 : 16000;
+    else if (effScale === "sanbaiman")
+      pointsWinnerGets = isWinnerOya ? 36000 : 24000;
+    else if (effScale === "yakuman")
+      pointsWinnerGets = isWinnerOya ? 48000 : 32000;
+    else if (effScale === "double_yakuman")
+      pointsWinnerGets = isWinnerOya ? 96000 : 64000;
+
+    if (type === "tsumo") {
+      if (tableSize === 4) {
+        if (isWinnerOya) {
+          pointsKoPays = pointsWinnerGets / 3;
+        } else {
+          pointsOyaPays = pointsWinnerGets / 2;
+          pointsKoPays = pointsWinnerGets / 4;
+        }
+      } else {
+        // 3人麻雀
+        if (sanmaTsumo === "marutori") {
+          // ツモ損なし（北家分を折半・100点切り上げ）
+          if (isWinnerOya) {
+            pointsKoPays = Math.ceil(pointsWinnerGets / 2 / 100) * 100;
+            pointsWinnerGets = pointsKoPays * 2;
+          } else {
+            const baseOya = pointsWinnerGets / 2;
+            const baseKo = pointsWinnerGets / 4;
+            const northHalf = Math.ceil(baseKo / 2 / 100) * 100;
+            pointsOyaPays = baseOya + northHalf;
+            pointsKoPays = baseKo + northHalf;
+            pointsWinnerGets = pointsOyaPays + pointsKoPays;
+          }
+        } else {
+          // ツモ損あり
+          if (isWinnerOya) {
+            pointsKoPays = pointsWinnerGets / 3;
+            pointsWinnerGets = pointsKoPays * 2;
+          } else {
+            pointsOyaPays = pointsWinnerGets / 2;
+            pointsKoPays = pointsWinnerGets / 4;
+            pointsWinnerGets = pointsOyaPays + pointsKoPays;
+          }
+        }
+      }
+    }
+  } else {
+    const baseScore = fu * Math.pow(2, han + 2);
+    if (type === "ron") {
+      const rawScore = isWinnerOya ? baseScore * 6 : baseScore * 4;
+      pointsWinnerGets = Math.ceil(rawScore / 100) * 100;
+    } else {
+      const stdOyaPay = Math.ceil((baseScore * 4) / 100) * 100;
+      const stdKoPay = Math.ceil((baseScore * 2) / 100) * 100;
+      if (tableSize === 4) {
+        if (isWinnerOya) {
+          pointsKoPays = stdKoPay;
+          pointsWinnerGets = pointsKoPays * 3;
+        } else {
+          pointsOyaPays = stdOyaPay;
+          pointsKoPays = stdKoPay;
+          pointsWinnerGets = pointsOyaPays + pointsKoPays * 2;
+        }
+      } else {
+        // 3人麻雀
+        if (sanmaTsumo === "marutori") {
+          if (isWinnerOya) {
+            const total4P = stdKoPay * 3;
+            pointsKoPays = Math.ceil(total4P / 2 / 100) * 100;
+            pointsWinnerGets = pointsKoPays * 2;
+          } else {
+            const northHalf = Math.ceil(stdKoPay / 2 / 100) * 100;
+            pointsOyaPays = stdOyaPay + northHalf;
+            pointsKoPays = stdKoPay + northHalf;
+            pointsWinnerGets = pointsOyaPays + pointsKoPays;
+          }
+        } else {
+          if (isWinnerOya) {
+            pointsKoPays = stdKoPay;
+            pointsWinnerGets = pointsKoPays * 2;
+          } else {
+            pointsOyaPays = stdOyaPay;
+            pointsKoPays = stdKoPay;
+            pointsWinnerGets = pointsOyaPays + pointsKoPays;
+          }
+        }
+      }
+    }
+  }
+
+  return { pointsWinnerGets, pointsOyaPays, pointsKoPays };
 }
 
 export const App: React.FC = () => {
@@ -193,9 +331,11 @@ export const App: React.FC = () => {
     extraInfo: "",
     isTobiEnd: false,
     isRenchan: false,
+    isAllLastEnd: false,
+    canAgariYame: false,
+    isSameKyokuRetry: false,
   });
 
-  // 自動保存
   useEffect(() => {
     try {
       localStorage.setItem("mj_manager_state", JSON.stringify(appState));
@@ -211,6 +351,21 @@ export const App: React.FC = () => {
     }
     return "未知のメンツ";
   };
+
+  const createRoundSnapshot = (state: AppState): RoundSnapshot => ({
+    activePlayers: [...state.activePlayers],
+    subPlayer: state.subPlayer,
+    currentPoints: { ...state.currentPoints },
+    currentWind: state.currentWind,
+    currentKyoku: state.currentKyoku,
+    honbaCount: state.honbaCount,
+    kyotakuCount: state.kyotakuCount,
+    riichiPlayers: [...state.riichiPlayers],
+    matchLogs: state.matchLogs.map((l) => ({
+      ...l,
+      rows: l.rows.map((r) => ({ ...r })),
+    })),
+  });
 
   // ==========================================
   // 1. メンバー登録・ルーム管理ハンドラ
@@ -232,6 +387,7 @@ export const App: React.FC = () => {
           nextPlayerId: 1,
           players: {},
           playerGames: {},
+          matchHistory: [],
         };
       }
       return {
@@ -273,13 +429,15 @@ export const App: React.FC = () => {
     entries: { id: number | null; name: string }[],
     newRoomName?: string
   ) => {
-    const targetRoomName = newRoomName?.trim() || appState.currentRoomName || "デフォルトルーム";
+    const targetRoomName =
+      newRoomName?.trim() || appState.currentRoomName || "デフォルトルーム";
     const existingRoom = appState.rooms[targetRoomName] || {
       roomName: targetRoomName,
       gameCount: 0,
       nextPlayerId: 1,
       players: {},
       playerGames: {},
+      matchHistory: [],
     };
 
     const updatedPlayers = { ...existingRoom.players };
@@ -302,6 +460,7 @@ export const App: React.FC = () => {
           name: trimmed,
           totalGames: 0,
           points: 0,
+          rankCounts: [0, 0, 0, 0],
         };
         registeredIds.push(newId);
       }
@@ -317,7 +476,6 @@ export const App: React.FC = () => {
         ? 4
         : parseInt(appState.rules.gameMode, 10);
 
-    // 既存の席配置のうち今回の参加メンバーに含まれるものは維持
     const nextSeats: (number | null)[] = [];
     for (let i = 0; i < renderSeatsCount; i++) {
       const prevId = appState.seatAssignments[i] ?? null;
@@ -438,6 +596,7 @@ export const App: React.FC = () => {
       kyotakuCount: 0,
       riichiPlayers: [],
       matchLogs: [],
+      roundHistory: [],
       dice: {
         resultText: "出目: --",
         naviText: "山取り位置ナビ",
@@ -469,11 +628,32 @@ export const App: React.FC = () => {
     }));
   };
 
-  const handleDeclareRiichi = (playerId: number) => {
+  // 立直の宣言・取り消しトグル機能
+  const handleToggleRiichi = (playerId: number) => {
     if (appState.riichiPlayers.includes(playerId)) {
-      alert(`${getPlayerName(playerId)} はすでに立直しています。`);
+      // 立直の取り消し（1,000点返却＆供託-1）
+      setAppState((prev) => ({
+        ...prev,
+        currentPoints: {
+          ...prev.currentPoints,
+          [playerId]: (prev.currentPoints[playerId] ?? 0) + 1000,
+        },
+        kyotakuCount: Math.max(0, prev.kyotakuCount - 1),
+        riichiPlayers: prev.riichiPlayers.filter((id) => id !== playerId),
+      }));
+
+      setMatchCalc((prev) => {
+        if (prev.type === "tenpai") {
+          return {
+            ...prev,
+            winners: prev.winners.filter((id) => id !== playerId),
+          };
+        }
+        return prev;
+      });
       return;
     }
+
     const currentPt = appState.currentPoints[playerId] ?? 0;
     if (currentPt < 1000) {
       alert(
@@ -521,15 +701,72 @@ export const App: React.FC = () => {
     setMatchCalc(INITIAL_MATCH_CALC);
   };
 
-  const finalizeEndMatch = (pointsSnapshot: Record<number, number>, logsSnapshot: MatchLog[]) => {
+  // 1局前の状態に戻す（Undo）
+  const handleUndoLastRound = () => {
+    if (appState.roundHistory.length === 0) return;
+    const lastSnap = appState.roundHistory[appState.roundHistory.length - 1];
+    if (
+      !window.confirm(
+        "直前の局の精算を取り消して、1局前の状態に戻しますか？"
+      )
+    ) {
+      return;
+    }
+
+    setAppState((prev) => ({
+      ...prev,
+      activePlayers: lastSnap.activePlayers,
+      subPlayer: lastSnap.subPlayer,
+      currentPoints: lastSnap.currentPoints,
+      currentWind: lastSnap.currentWind,
+      currentKyoku: lastSnap.currentKyoku,
+      honbaCount: lastSnap.honbaCount,
+      kyotakuCount: lastSnap.kyotakuCount,
+      riichiPlayers: lastSnap.riichiPlayers,
+      matchLogs: lastSnap.matchLogs,
+      roundHistory: prev.roundHistory.slice(0, -1),
+    }));
+    setMatchCalc(INITIAL_MATCH_CALC);
+    setIsLogOpen(false);
+  };
+
+  // 終局精算処理（残った供託のトップ取り ＆ 同点時折半対応 ＆ 着順履歴保存）
+  const finalizeEndMatch = (
+    pointsSnapshot: Record<number, number>,
+    logsSnapshot: MatchLog[],
+    remainingKyotaku: number
+  ) => {
     const tableSize = appState.tableSize;
+    const finalPoints = { ...pointsSnapshot };
+    const finalLogs = [...logsSnapshot];
+
     const currentScores: { id: number; score: number; index: number }[] = [];
     for (let i = 0; i < tableSize; i++) {
       const pId = appState.activePlayers[i];
-      const score = pointsSnapshot[pId] ?? 0;
+      const score = finalPoints[pId] ?? 0;
       currentScores.push({ id: pId, score, index: i });
     }
     currentScores.sort((a, b) => b.score - a.score || a.index - b.index);
+
+    // 残っている供託棒を1位（トップ）が獲得
+    if (remainingKyotaku > 0 && currentScores.length > 0) {
+      const topPlayerId = currentScores[0].id;
+      const kyotakuBonus = remainingKyotaku * 1000;
+      currentScores[0].score += kyotakuBonus;
+      finalPoints[topPlayerId] = (finalPoints[topPlayerId] ?? 0) + kyotakuBonus;
+      finalLogs.push({
+        title: "終局時 残供託回収",
+        rows: [
+          {
+            type: "トップ取",
+            name: getPlayerName(topPlayerId),
+            pt: kyotakuBonus,
+          },
+        ],
+        isTobiEnd: false,
+        tobiPlayer: "",
+      });
+    }
 
     const parts = appState.rules.points.split("-");
     const startPoints = parseInt(parts[0], 10) || 25000;
@@ -545,15 +782,43 @@ export const App: React.FC = () => {
     if (umaRule === "10-20") uma = is3P ? [10, 0, -10] : [20, 10, -10, -20];
     if (umaRule === "none") uma = is3P ? [0, 0, 0] : [0, 0, 0, 0];
 
+    const rankBonuses = uma.map((u, idx) => u + (idx === 0 ? oka : 0));
+
+    // 同点時折半対応
+    const effectiveBonuses = [...rankBonuses];
+    if (appState.rules.tieBreaker === "split") {
+      let i = 0;
+      while (i < currentScores.length) {
+        let j = i;
+        while (
+          j + 1 < currentScores.length &&
+          currentScores[j + 1].score === currentScores[i].score
+        ) {
+          j++;
+        }
+        if (j > i) {
+          let sumBonus = 0;
+          for (let k = i; k <= j; k++) sumBonus += rankBonuses[k];
+          const avgBonus = sumBonus / (j - i + 1);
+          for (let k = i; k <= j; k++) effectiveBonuses[k] = avgBonus;
+        }
+        i = j + 1;
+      }
+    }
+
     const calculatedRows: ResultRow[] = [];
     const room = appState.rooms[appState.currentRoomName];
     const updatedPlayers = { ...(room?.players || {}) };
+    const historyResults: MatchHistoryEntry["results"] = [];
 
     currentScores.forEach((item, rank) => {
       const rawPt = (item.score - baseReturn) / 1000;
-      const roundedPt = Math.round(rawPt);
-      let finalPt = roundedPt + uma[rank];
-      if (rank === 0) finalPt += oka;
+      const roundedPt =
+        appState.rules.tieBreaker === "split"
+          ? Math.round(rawPt * 10) / 10
+          : Math.round(rawPt);
+      const finalPt =
+        Math.round((roundedPt + effectiveBonuses[rank]) * 10) / 10;
 
       calculatedRows.push({
         rank: rank + 1,
@@ -562,32 +827,287 @@ export const App: React.FC = () => {
         pt: finalPt,
       });
 
+      historyResults.push({
+        playerId: item.id,
+        name: getPlayerName(item.id),
+        rank: rank + 1,
+        score: item.score,
+        pt: finalPt,
+      });
+
       if (updatedPlayers[item.id]) {
+        const prevPlayer = updatedPlayers[item.id];
+        const nextRankCounts: [number, number, number, number] = [
+          ...(prevPlayer.rankCounts || [0, 0, 0, 0]),
+        ];
+        if (rank >= 0 && rank < 4) {
+          nextRankCounts[rank] = (nextRankCounts[rank] || 0) + 1;
+        }
         updatedPlayers[item.id] = {
-          ...updatedPlayers[item.id],
-          points: (updatedPlayers[item.id].points || 0) + finalPt,
-          totalGames: (updatedPlayers[item.id].totalGames || 0) + 1,
+          ...prevPlayer,
+          points: Math.round(((prevPlayer.points || 0) + finalPt) * 10) / 10,
+          totalGames: (prevPlayer.totalGames || 0) + 1,
+          rankCounts: nextRankCounts,
         };
       }
     });
 
-    setAppState((prev) => ({
-      ...prev,
-      currentPoints: pointsSnapshot,
-      matchLogs: logsSnapshot,
-      rooms: {
-        ...prev.rooms,
-        [prev.currentRoomName]: {
-          ...prev.rooms[prev.currentRoomName],
-          gameCount: (prev.rooms[prev.currentRoomName]?.gameCount || 0) + 1,
-          players: updatedPlayers,
+    const newHistoryEntry: MatchHistoryEntry = {
+      id: `${Date.now()}`,
+      timestamp: new Date().toLocaleString("ja-JP"),
+      results: historyResults,
+    };
+
+    setAppState((prev) => {
+      const prevRoom = prev.rooms[prev.currentRoomName];
+      return {
+        ...prev,
+        currentPoints: finalPoints,
+        kyotakuCount: 0,
+        matchLogs: finalLogs,
+        rooms: {
+          ...prev.rooms,
+          [prev.currentRoomName]: {
+            ...prevRoom,
+            gameCount: (prevRoom?.gameCount || 0) + 1,
+            players: updatedPlayers,
+            matchHistory: [...(prevRoom?.matchHistory || []), newHistoryEntry],
+          },
         },
-      },
-      lastResultRows: calculatedRows,
-      currentScreen: "screen-result",
-    }));
+        lastResultRows: calculatedRows,
+        currentScreen: "screen-result",
+      };
+    });
   };
 
+  // 直前の半荘成績を取り消す
+  const handleUndoLastMatchStats = () => {
+    const room = appState.rooms[appState.currentRoomName];
+    if (
+      !room ||
+      !Array.isArray(room.matchHistory) ||
+      room.matchHistory.length === 0
+    ) {
+      return;
+    }
+    const lastEntry = room.matchHistory[room.matchHistory.length - 1];
+    if (
+      !window.confirm(
+        `直前の半荘成績（${lastEntry.timestamp}）を総合成績表から取り消しますか？`
+      )
+    ) {
+      return;
+    }
+
+    setAppState((prev) => {
+      const currentRoom = prev.rooms[prev.currentRoomName];
+      if (!currentRoom || !currentRoom.matchHistory?.length) return prev;
+      const popped =
+        currentRoom.matchHistory[currentRoom.matchHistory.length - 1];
+      const updatedPlayers = { ...currentRoom.players };
+
+      popped.results.forEach((res) => {
+        const p = updatedPlayers[res.playerId];
+        if (p) {
+          const nextRc: [number, number, number, number] = [
+            ...(p.rankCounts || [0, 0, 0, 0]),
+          ];
+          const rIdx = res.rank - 1;
+          if (rIdx >= 0 && rIdx < 4) {
+            nextRc[rIdx] = Math.max(0, (nextRc[rIdx] || 0) - 1);
+          }
+          updatedPlayers[res.playerId] = {
+            ...p,
+            points: Math.round(((p.points || 0) - res.pt) * 10) / 10,
+            totalGames: Math.max(0, (p.totalGames || 0) - 1),
+            rankCounts: nextRc,
+          };
+        }
+      });
+
+      return {
+        ...prev,
+        rooms: {
+          ...prev.rooms,
+          [prev.currentRoomName]: {
+            ...currentRoom,
+            gameCount: Math.max(0, (currentRoom.gameCount || 0) - 1),
+            players: updatedPlayers,
+            matchHistory: currentRoom.matchHistory.slice(0, -1),
+          },
+        },
+      };
+    });
+  };
+
+  // オーラス・アガリ止め判定ヘルパー
+  const evaluateAllLastStatus = (
+    isRenchan: boolean,
+    nextPoints: Record<number, number>
+  ): { isAllLastEnd: boolean; canAgariYame: boolean } => {
+    const targetMaxWind = appState.rules.length === "tonpu" ? 0 : 1;
+    const maxKyoku = appState.tableSize === 3 ? 3 : 4;
+    const isAllLastRound =
+      appState.currentWind >= targetMaxWind &&
+      appState.currentKyoku === maxKyoku;
+
+    if (!isAllLastRound) {
+      return { isAllLastEnd: false, canAgariYame: false };
+    }
+
+    if (!isRenchan) {
+      return { isAllLastEnd: true, canAgariYame: false };
+    }
+
+    // オーラスで親が連荘した場合、親がトップ（単独1位）ならアガリ止め／聴牌止めを選択可能にする
+    const oyaSeatIndex = (appState.currentKyoku - 1) % appState.tableSize;
+    const currentOyaId = appState.activePlayers[oyaSeatIndex];
+    const oyaScore = nextPoints[currentOyaId] ?? 0;
+
+    let isOyaTop = true;
+    for (let i = 0; i < appState.tableSize; i++) {
+      const pId = appState.activePlayers[i];
+      if (pId !== currentOyaId && (nextPoints[pId] ?? 0) >= oyaScore) {
+        isOyaTop = false;
+        break;
+      }
+    }
+
+    return { isAllLastEnd: false, canAgariYame: isOyaTop };
+  };
+
+  // 途中流局（九種九牌・四風連打など）
+  const handleExecuteAbortiveDraw = (isRenchan: boolean) => {
+    const snapshot = createRoundSnapshot(appState);
+    const windStr = WIND_LABELS[appState.currentWind] || "東";
+    const nextHonba = appState.honbaCount + 1;
+
+    const currentLogObj: MatchLog = {
+      title: `${windStr}${appState.currentKyoku}局　${appState.honbaCount}本場`,
+      rows: appState.activePlayers
+        .slice(0, appState.tableSize)
+        .map((pId) => ({
+          type: "途中流局",
+          name: getPlayerName(pId),
+          pt: 0,
+        })),
+      isTobiEnd: false,
+      tobiPlayer: "",
+    };
+
+    const diffList: TransferDiffItem[] = appState.activePlayers
+      .slice(0, appState.tableSize)
+      .map((pId) => ({
+        name: getPlayerName(pId),
+        diff: 0,
+      }));
+
+    const { isAllLastEnd, canAgariYame } = evaluateAllLastStatus(
+      isRenchan,
+      appState.currentPoints
+    );
+
+    setAppState((prev) => ({
+      ...prev,
+      honbaCount: nextHonba,
+      matchLogs: [...prev.matchLogs, currentLogObj],
+      roundHistory: [...prev.roundHistory, snapshot],
+    }));
+
+    setTransferModal({
+      isOpen: true,
+      title: `${windStr}${appState.currentKyoku}局 ${appState.honbaCount}本場 精算`,
+      subtitle: `途中流局（${isRenchan ? "親連荘" : "親流れ"}）`,
+      diffList,
+      extraInfo: `点数移動なし / 本場+1 ➔ ${nextHonba}本場（供託維持）`,
+      isTobiEnd: false,
+      isRenchan,
+      isAllLastEnd,
+      canAgariYame,
+      isSameKyokuRetry: false,
+    });
+  };
+
+  // チョンボ（錯和・満貫払い・同局やり直し）
+  const handleExecuteChombo = () => {
+    if (matchCalc.winners.length === 0) {
+      alert("🚨 チョンボ者の枠に対象プレイヤーをドロップ（またはタップ）してください");
+      return;
+    }
+
+    const offenderId = matchCalc.winners[0];
+    const snapshot = createRoundSnapshot(appState);
+    const tableSize = appState.tableSize;
+    const oyaSeatIndex = (appState.currentKyoku - 1) % tableSize;
+    const currentOyaId = appState.activePlayers[oyaSeatIndex];
+    const isOffenderOya = offenderId === currentOyaId;
+
+    const nextPoints = { ...appState.currentPoints };
+    let nextKyotaku = appState.kyotakuCount;
+
+    // この局に出された立直棒は各自へ返却
+    appState.riichiPlayers.forEach((rPid) => {
+      nextPoints[rPid] = (nextPoints[rPid] ?? 0) + 1000;
+      nextKyotaku = Math.max(0, nextKyotaku - 1);
+    });
+
+    const windStr = WIND_LABELS[appState.currentWind] || "東";
+    const currentLogObj: MatchLog = {
+      title: `${windStr}${appState.currentKyoku}局　${appState.honbaCount}本場 (チョンボ)`,
+      rows: [],
+      isTobiEnd: false,
+      tobiPlayer: "",
+    };
+
+    const diffList: TransferDiffItem[] = [];
+    let totalPenalty = 0;
+
+    appState.activePlayers.slice(0, tableSize).forEach((pId) => {
+      if (pId === offenderId) return;
+      const recv = isOffenderOya ? 4000 : pId === currentOyaId ? 4000 : 2000;
+      totalPenalty += recv;
+      nextPoints[pId] = (nextPoints[pId] ?? 0) + recv;
+      currentLogObj.rows.push({
+        type: "罰符受取",
+        name: getPlayerName(pId),
+        pt: recv,
+      });
+      diffList.push({ name: getPlayerName(pId), diff: recv });
+    });
+
+    nextPoints[offenderId] = (nextPoints[offenderId] ?? 0) - totalPenalty;
+    currentLogObj.rows.unshift({
+      type: "チョンボ",
+      name: getPlayerName(offenderId),
+      pt: -totalPenalty,
+    });
+    diffList.unshift({ name: getPlayerName(offenderId), diff: -totalPenalty });
+
+    setAppState((prev) => ({
+      ...prev,
+      currentPoints: nextPoints,
+      kyotakuCount: nextKyotaku,
+      riichiPlayers: [],
+      matchLogs: [...prev.matchLogs, currentLogObj],
+      roundHistory: [...prev.roundHistory, snapshot],
+    }));
+
+    setTransferModal({
+      isOpen: true,
+      title: `${windStr}${appState.currentKyoku}局 ${appState.honbaCount}本場 チョンボ精算`,
+      subtitle: `🚨 チョンボ（満貫払い）`,
+      diffList,
+      extraInfo:
+        "当局の立直棒は返却され、本場据え置きで同じ局をやり直します。",
+      isTobiEnd: false,
+      isRenchan: true,
+      isAllLastEnd: false,
+      canAgariYame: false,
+      isSameKyokuRetry: true,
+    });
+  };
+
+  // 通常精算（ロン・ダブロン・ツモ・流局聴牌）
   const handleExecutePointTransfer = () => {
     if (matchCalc.type !== "tenpai" && matchCalc.winners.length === 0) {
       alert("和了者(アガリ)を設定してください");
@@ -598,9 +1118,11 @@ export const App: React.FC = () => {
       return;
     }
 
+    const snapshot = createRoundSnapshot(appState);
     const tableSize = appState.tableSize;
     const oyaSeatIndex = (appState.currentKyoku - 1) % tableSize;
     const currentOyaId = appState.activePlayers[oyaSeatIndex];
+    const windStr = WIND_LABELS[appState.currentWind] || "東";
     let isRenchan = false;
 
     const currentHonba = appState.honbaCount;
@@ -612,9 +1134,7 @@ export const App: React.FC = () => {
     let nextKyotaku = appState.kyotakuCount;
 
     const currentLogObj: MatchLog = {
-      title: `${appState.currentWind === 0 ? "東" : "南"}${
-        appState.currentKyoku
-      }局　${currentHonba}本場`,
+      title: `${windStr}${appState.currentKyoku}局　${currentHonba}本場`,
       rows: [],
       isTobiEnd: false,
       tobiPlayer: "",
@@ -630,19 +1150,12 @@ export const App: React.FC = () => {
       const allActive = appState.activePlayers.slice(0, tableSize);
       const noTenCount = allActive.length - tenpaiCount;
 
+      const totalPool =
+        tableSize === 3 && appState.rules.sanmaNoten === "2000" ? 2000 : 3000;
+
       if (tenpaiCount > 0 && noTenCount > 0) {
-        let plusScore = 0;
-        let minusScore = 0;
-        if (tenpaiCount === 1) {
-          plusScore = 3000;
-          minusScore = 3000 / noTenCount;
-        } else if (tenpaiCount === 2) {
-          plusScore = 1500;
-          minusScore = 3000 / noTenCount;
-        } else if (tenpaiCount === 3) {
-          plusScore = 1000;
-          minusScore = 3000;
-        }
+        const plusScore = totalPool / tenpaiCount;
+        const minusScore = totalPool / noTenCount;
 
         allActive.forEach((pId) => {
           if (matchCalc.winners.includes(pId)) {
@@ -682,136 +1195,133 @@ export const App: React.FC = () => {
       modalExtraInfo +=
         (modalExtraInfo ? "<br>" : "") +
         `本場を+1します（現在: ${nextHonba}本場）`;
-    } else {
-      const winnerId = matchCalc.winners[0];
-      const isWinnerOya = currentOyaId === winnerId;
-      let pointsWinnerGets = 0;
-      let pointsOyaPays = 0;
-      let pointsKoPays = 0;
+    } else if (matchCalc.type === "ron" && matchCalc.loser !== null) {
+      // ロン和了（シングルロン ＆ ダブロン対応）
+      const loserId = matchCalc.loser;
+      const loserSeatIdx = appState.activePlayers.indexOf(loserId);
 
-      if (matchCalc.scale) {
-        const scaleNames: Record<string, string> = {
-          mangan: "満貫",
-          hanman: "跳満",
-          baiman: "倍満",
-          sanbaiman: "三倍満",
-          yakuman: "役満",
-        };
-        modalSubtitle = `${
-          matchCalc.type === "ron" ? "ロン和了" : "ツモ和了"
-        }（${scaleNames[matchCalc.scale]}）`;
-        if (matchCalc.scale === "mangan")
-          pointsWinnerGets = isWinnerOya ? 12000 : 8000;
-        if (matchCalc.scale === "hanman")
-          pointsWinnerGets = isWinnerOya ? 18000 : 12000;
-        if (matchCalc.scale === "baiman")
-          pointsWinnerGets = isWinnerOya ? 24000 : 16000;
-        if (matchCalc.scale === "sanbaiman")
-          pointsWinnerGets = isWinnerOya ? 36000 : 24000;
-        if (matchCalc.scale === "yakuman")
-          pointsWinnerGets = isWinnerOya ? 48000 : 32000;
+      // 放銃者からツモ巡目（反時計回り）で最も近い和了者（頭ハネ・上家取り）を特定
+      const sortedWinners = [...matchCalc.winners].sort((a, b) => {
+        const seatA = appState.activePlayers.indexOf(a);
+        const seatB = appState.activePlayers.indexOf(b);
+        const distA = (seatA - loserSeatIdx + tableSize) % tableSize;
+        const distB = (seatB - loserSeatIdx + tableSize) % tableSize;
+        return distA - distB;
+      });
 
-        if (matchCalc.type === "tsumo") {
-          if (isWinnerOya) {
-            pointsKoPays = pointsWinnerGets / (tableSize - 1);
-          } else {
-            pointsOyaPays = pointsWinnerGets / 2;
-            pointsKoPays = pointsWinnerGets / 4;
-            if (tableSize === 3) {
-              pointsWinnerGets = pointsOyaPays + pointsKoPays;
-            }
-          }
-        }
-      } else {
-        const { han, fu } = matchCalc;
-        modalSubtitle = `${
-          matchCalc.type === "ron" ? "ロン和了" : "ツモ和了"
-        }（${han}翻 ${fu}符）`;
+      const scaleNames: Record<string, string> = {
+        mangan: "満貫",
+        hanman: "跳満",
+        baiman: "倍満",
+        sanbaiman: "三倍満",
+        yakuman: "役満",
+        double_yakuman: "W役満",
+      };
+      const handLabel = matchCalc.scale
+        ? scaleNames[matchCalc.scale]
+        : `${matchCalc.han}翻 ${matchCalc.fu}符`;
 
-        if ((han === 3 && fu >= 60) || (han === 4 && fu >= 30) || han >= 5) {
-          pointsWinnerGets = isWinnerOya ? 12000 : 8000;
-          if (matchCalc.type === "tsumo") {
-            if (isWinnerOya) {
-              pointsKoPays = pointsWinnerGets / (tableSize - 1);
-            } else {
-              pointsOyaPays = pointsWinnerGets / 2;
-              pointsKoPays = pointsWinnerGets / 4;
-              if (tableSize === 3) {
-                pointsWinnerGets = pointsOyaPays + pointsKoPays;
-              }
-            }
-          }
-        } else {
-          const baseScore = fu * Math.pow(2, han + 2);
-          if (matchCalc.type === "ron") {
-            const rawScore = isWinnerOya ? baseScore * 6 : baseScore * 4;
-            pointsWinnerGets = Math.ceil(rawScore / 100) * 100;
-          } else {
-            if (isWinnerOya) {
-              pointsKoPays = Math.ceil((baseScore * 2) / 100) * 100;
-              pointsWinnerGets = pointsKoPays * (tableSize - 1);
-            } else {
-              pointsOyaPays = Math.ceil((baseScore * 4) / 100) * 100;
-              pointsKoPays = Math.ceil((baseScore * 2) / 100) * 100;
-              pointsWinnerGets =
-                pointsOyaPays +
-                pointsKoPays * (tableSize - 1 - (tableSize === 3 ? 1 : 0));
-            }
-          }
-        }
-      }
+      modalSubtitle =
+        sortedWinners.length >= 2
+          ? `ダブロン和了（${sortedWinners.length}名 / ${handLabel}）`
+          : `ロン和了（${handLabel}）`;
 
-      if (matchCalc.type === "ron" && matchCalc.loser !== null) {
-        const finalGet = pointsWinnerGets + honbaRonValue;
-        nextPoints[winnerId] = (nextPoints[winnerId] ?? 0) + finalGet;
-        nextPoints[matchCalc.loser] =
-          (nextPoints[matchCalc.loser] ?? 0) - finalGet;
+      let totalLoserPays = 0;
+
+      sortedWinners.forEach((wId, idx) => {
+        const isWinnerOya = wId === currentOyaId;
+        const { pointsWinnerGets } = calcHandPoints(
+          isWinnerOya,
+          "ron",
+          matchCalc.scale,
+          matchCalc.han,
+          matchCalc.fu,
+          tableSize,
+          appState.rules.sanmaTsumo
+        );
+
+        // 積み棒（本場）は上家（1人目）に加算
+        const honbaAdd = idx === 0 ? honbaRonValue : 0;
+        const kPt = idx === 0 ? nextKyotaku * 1000 : 0;
+        const finalGet = pointsWinnerGets + honbaAdd;
+
+        totalLoserPays += finalGet;
+        nextPoints[wId] = (nextPoints[wId] ?? 0) + finalGet + kPt;
 
         currentLogObj.rows.push({
           type: "ロン和　",
-          name: getPlayerName(winnerId),
+          name: getPlayerName(wId),
           pt: finalGet,
         });
-        currentLogObj.rows.push({
-          type: "放銃　　",
-          name: getPlayerName(matchCalc.loser),
-          pt: -finalGet,
-        });
-
-        diffList.push({ name: getPlayerName(winnerId), diff: finalGet });
-        diffList.push({
-          name: getPlayerName(matchCalc.loser),
-          diff: -finalGet,
-        });
-      } else {
-        const finalGet =
-          pointsWinnerGets + (tableSize - 1) * honbaTsumoValue;
-        nextPoints[winnerId] = (nextPoints[winnerId] ?? 0) + finalGet;
-        currentLogObj.rows.push({
-          type: "ツモ和　",
-          name: getPlayerName(winnerId),
-          pt: finalGet,
-        });
-        diffList.push({ name: getPlayerName(winnerId), diff: finalGet });
-
-        appState.activePlayers.slice(0, tableSize).forEach((pId) => {
-          if (pId === winnerId) return;
-          const loss =
-            (currentOyaId === pId ? pointsOyaPays : pointsKoPays) +
-            honbaTsumoValue;
-          nextPoints[pId] = (nextPoints[pId] ?? 0) - loss;
+        if (kPt > 0) {
           currentLogObj.rows.push({
-            type: "　　　　",
-            name: getPlayerName(pId),
-            pt: -loss,
+            type: "供託回収",
+            name: getPlayerName(wId),
+            pt: kPt,
           });
-          diffList.push({ name: getPlayerName(pId), diff: -loss });
-        });
-      }
+          modalExtraInfo += `供託棒 ${nextKyotaku}本（+${kPt.toLocaleString()}点）を${getPlayerName(
+            wId
+          )}が獲得<br>`;
+        }
+        diffList.push({ name: getPlayerName(wId), diff: finalGet + kPt });
+      });
 
-      if (nextKyotaku > 0) {
-        const kPt = nextKyotaku * 1000;
-        nextPoints[winnerId] = (nextPoints[winnerId] ?? 0) + kPt;
+      nextKyotaku = 0;
+      nextPoints[loserId] = (nextPoints[loserId] ?? 0) - totalLoserPays;
+      currentLogObj.rows.push({
+        type: "放銃　　",
+        name: getPlayerName(loserId),
+        pt: -totalLoserPays,
+      });
+      diffList.push({ name: getPlayerName(loserId), diff: -totalLoserPays });
+
+      if (sortedWinners.includes(currentOyaId)) {
+        isRenchan = true;
+        nextHonba += 1;
+        modalExtraInfo += `親の和了（連荘）本場+1 ➔ ${nextHonba}本場`;
+      } else {
+        isRenchan = false;
+        nextHonba = 0;
+        modalExtraInfo += `子のアガリ（本場リセット ➔ 0本場）`;
+      }
+    } else {
+      // ツモ和了
+      const winnerId = matchCalc.winners[0];
+      const isWinnerOya = currentOyaId === winnerId;
+      const scaleNames: Record<string, string> = {
+        mangan: "満貫",
+        hanman: "跳満",
+        baiman: "倍満",
+        sanbaiman: "三倍満",
+        yakuman: "役満",
+        double_yakuman: "W役満",
+      };
+      const handLabel = matchCalc.scale
+        ? scaleNames[matchCalc.scale]
+        : `${matchCalc.han}翻 ${matchCalc.fu}符`;
+      modalSubtitle = `ツモ和了（${handLabel}）`;
+
+      const { pointsWinnerGets, pointsOyaPays, pointsKoPays } = calcHandPoints(
+        isWinnerOya,
+        "tsumo",
+        matchCalc.scale,
+        matchCalc.han,
+        matchCalc.fu,
+        tableSize,
+        appState.rules.sanmaTsumo
+      );
+
+      const finalGet =
+        pointsWinnerGets + (tableSize - 1) * honbaTsumoValue;
+      const kPt = nextKyotaku * 1000;
+
+      nextPoints[winnerId] = (nextPoints[winnerId] ?? 0) + finalGet + kPt;
+      currentLogObj.rows.push({
+        type: "ツモ和　",
+        name: getPlayerName(winnerId),
+        pt: finalGet,
+      });
+      if (kPt > 0) {
         currentLogObj.rows.push({
           type: "供託回収",
           name: getPlayerName(winnerId),
@@ -820,6 +1330,21 @@ export const App: React.FC = () => {
         modalExtraInfo += `供託棒 ${nextKyotaku}本（+${kPt.toLocaleString()}点）を獲得<br>`;
         nextKyotaku = 0;
       }
+      diffList.push({ name: getPlayerName(winnerId), diff: finalGet + kPt });
+
+      appState.activePlayers.slice(0, tableSize).forEach((pId) => {
+        if (pId === winnerId) return;
+        const loss =
+          (currentOyaId === pId ? pointsOyaPays : pointsKoPays) +
+          honbaTsumoValue;
+        nextPoints[pId] = (nextPoints[pId] ?? 0) - loss;
+        currentLogObj.rows.push({
+          type: "　　　　",
+          name: getPlayerName(pId),
+          pt: -loss,
+        });
+        diffList.push({ name: getPlayerName(pId), diff: -loss });
+      });
 
       if (isWinnerOya) {
         isRenchan = true;
@@ -849,6 +1374,16 @@ export const App: React.FC = () => {
       modalExtraInfo += `<br><span style="color:#f43f5e;font-weight:bold;">🚨 ぶっ飛び：${tobiPlayerName}が0点未満のためコールド終局</span>`;
     }
 
+    const { isAllLastEnd, canAgariYame } = isTobiEnd
+      ? { isAllLastEnd: false, canAgariYame: false }
+      : evaluateAllLastStatus(isRenchan, nextPoints);
+
+    if (isAllLastEnd) {
+      modalExtraInfo += `<br><span style="color:#fbbf24;font-weight:bold;">🏁 オーラス終了（終局または延長戦を選択できます）</span>`;
+    } else if (canAgariYame) {
+      modalExtraInfo += `<br><span style="color:#34d399;font-weight:bold;">👑 オーラス親トップ（アガリ止め/聴牌止めで終局可能）</span>`;
+    }
+
     const nextLogs = [...appState.matchLogs, currentLogObj];
 
     setAppState((prev) => ({
@@ -857,27 +1392,38 @@ export const App: React.FC = () => {
       honbaCount: nextHonba,
       kyotakuCount: nextKyotaku,
       matchLogs: nextLogs,
+      roundHistory: [...prev.roundHistory, snapshot],
     }));
 
     setTransferModal({
       isOpen: true,
-      title: `${appState.currentWind === 0 ? "東" : "南"}${
-        appState.currentKyoku
-      }局 ${currentHonba}本場 精算`,
+      title: `${windStr}${appState.currentKyoku}局 ${currentHonba}本場 精算`,
       subtitle: modalSubtitle,
       diffList,
       extraInfo: modalExtraInfo,
       isTobiEnd,
       isRenchan,
+      isAllLastEnd,
+      canAgariYame,
+      isSameKyokuRetry: false,
     });
   };
 
-  const handleConfirmPointTransferNext = () => {
-    const { isTobiEnd, isRenchan } = transferModal;
+  const handleConfirmPointTransferNext = (forceEndMatch = false) => {
+    const { isTobiEnd, isRenchan, isSameKyokuRetry } = transferModal;
     setTransferModal((prev) => ({ ...prev, isOpen: false }));
 
-    if (isTobiEnd) {
-      finalizeEndMatch(appState.currentPoints, appState.matchLogs);
+    if (isTobiEnd || forceEndMatch) {
+      finalizeEndMatch(
+        appState.currentPoints,
+        appState.matchLogs,
+        appState.kyotakuCount
+      );
+      return;
+    }
+
+    if (isSameKyokuRetry) {
+      setMatchCalc(INITIAL_MATCH_CALC);
       return;
     }
 
@@ -896,14 +1442,14 @@ export const App: React.FC = () => {
           nextKyoku += 1;
           if (nextKyoku > 3) {
             nextKyoku = 1;
-            nextWind += 1;
+            nextWind = (nextWind + 1) % 4;
           }
         } else {
           nextKyoku += 1;
           const maxKyoku = prev.tableSize === 3 ? 3 : 4;
           if (nextKyoku > maxKyoku) {
             nextKyoku = 1;
-            nextWind += 1;
+            nextWind = (nextWind + 1) % 4;
           }
         }
       }
@@ -922,7 +1468,11 @@ export const App: React.FC = () => {
   };
 
   const handleEndMatch = () => {
-    finalizeEndMatch(appState.currentPoints, appState.matchLogs);
+    finalizeEndMatch(
+      appState.currentPoints,
+      appState.matchLogs,
+      appState.kyotakuCount
+    );
   };
 
   return (
@@ -972,13 +1522,17 @@ export const App: React.FC = () => {
           rules={appState.rules}
           dice={appState.dice}
           matchCalc={matchCalc}
+          canUndo={appState.roundHistory.length > 0}
           getPlayerName={getPlayerName}
           onRollDice={handleRollDice}
-          onDeclareRiichi={handleDeclareRiichi}
+          onToggleRiichi={handleToggleRiichi}
           onManualScoreChange={handleManualScoreChange}
           onUpdateMatchCalc={handleUpdateMatchCalc}
           onClearRoleSlots={handleClearRoleSlots}
           onExecutePointTransfer={handleExecutePointTransfer}
+          onExecuteAbortiveDraw={handleExecuteAbortiveDraw}
+          onExecuteChombo={handleExecuteChombo}
+          onUndoLastRound={handleUndoLastRound}
           onOpenLogModal={() => setIsLogOpen(true)}
           onEndMatch={handleEndMatch}
         />
@@ -1002,12 +1556,18 @@ export const App: React.FC = () => {
         isOpen={isStatsOpen}
         roomName={appState.currentRoomName}
         room={appState.rooms[appState.currentRoomName]}
+        onUndoLastMatchStats={handleUndoLastMatchStats}
         onClose={() => setIsStatsOpen(false)}
       />
 
       <LogModal
         isOpen={isLogOpen}
         matchLogs={appState.matchLogs}
+        canUndo={
+          appState.currentScreen === "screen-match" &&
+          appState.roundHistory.length > 0
+        }
+        onUndoLastRound={handleUndoLastRound}
         onClose={() => setIsLogOpen(false)}
       />
 
@@ -1018,4 +1578,3 @@ export const App: React.FC = () => {
     </>
   );
 };
-

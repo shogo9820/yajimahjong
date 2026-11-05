@@ -6,7 +6,7 @@ export type ScreenId =
 
 export type GameMode = "4" | "3" | "4-3打ち";
 
-export type AgariType = "ron" | "tsumo" | "tenpai";
+export type AgariType = "ron" | "tsumo" | "tenpai" | "special";
 
 export type ManganScale =
   | "mangan"
@@ -14,6 +14,7 @@ export type ManganScale =
   | "baiman"
   | "sanbaiman"
   | "yakuman"
+  | "double_yakuman"
   | null;
 
 export interface Player {
@@ -21,6 +22,21 @@ export interface Player {
   name: string;
   totalGames: number;
   points: number;
+  rankCounts?: [number, number, number, number];
+}
+
+export interface MatchHistoryPlayerResult {
+  playerId: number;
+  name: string;
+  rank: number;
+  score: number;
+  pt: number;
+}
+
+export interface MatchHistoryEntry {
+  id: string;
+  timestamp: string;
+  results: MatchHistoryPlayerResult[];
 }
 
 export interface Room {
@@ -29,6 +45,7 @@ export interface Room {
   nextPlayerId: number;
   players: Record<number, Player>;
   playerGames?: Record<number, number>;
+  matchHistory?: MatchHistoryEntry[];
 }
 
 export interface CustomRules {
@@ -39,6 +56,9 @@ export interface CustomRules {
   renchan: "tenpai" | "agari";
   tobi: "ari" | "nashi";
   kuitan: "ariari" | "ari-nashi" | "nashinashi";
+  tieBreaker: "kamicha" | "split";
+  sanmaTsumo: "tsumozon" | "marutori";
+  sanmaNoten: "3000" | "2000";
 }
 
 export interface MatchLogRow {
@@ -66,6 +86,18 @@ export interface DiceState {
   naviText: string;
 }
 
+export interface RoundSnapshot {
+  activePlayers: number[];
+  subPlayer: number | null;
+  currentPoints: Record<number, number>;
+  currentWind: number;
+  currentKyoku: number;
+  honbaCount: number;
+  kyotakuCount: number;
+  riichiPlayers: number[];
+  matchLogs: MatchLog[];
+}
+
 export interface AppState {
   rooms: Record<string, Room>;
   currentRoomName: string;
@@ -83,8 +115,15 @@ export interface AppState {
   currentScreen: ScreenId;
   rules: CustomRules;
   matchLogs: MatchLog[];
+  roundHistory: RoundSnapshot[];
   lastResultRows: ResultRow[];
   dice: DiceState;
+}
+
+export interface WinnerHandConfig {
+  fu: number;
+  han: number;
+  scale: ManganScale;
 }
 
 export interface MatchCalcState {
@@ -94,6 +133,7 @@ export interface MatchCalcState {
   scale: ManganScale;
   fu: number;
   han: number;
+  secondWinnerConfig?: WinnerHandConfig;
 }
 
 export interface TransferDiffItem {
@@ -109,7 +149,9 @@ export interface TransferModalData {
   extraInfo: string;
   isTobiEnd: boolean;
   isRenchan: boolean;
+  isAllLastEnd: boolean;
+  canAgariYame: boolean;
+  isSameKyokuRetry?: boolean;
 }
 
 export const WIND_LABELS = ["東", "南", "西", "北"] as const;
-

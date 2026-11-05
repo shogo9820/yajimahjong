@@ -5,6 +5,7 @@ interface StatsModalProps {
   isOpen: boolean;
   roomName: string;
   room: Room | undefined;
+  onUndoLastMatchStats: () => void;
   onClose: () => void;
 }
 
@@ -12,19 +13,33 @@ export const StatsModal: React.FC<StatsModalProps> = ({
   isOpen,
   roomName,
   room,
+  onUndoLastMatchStats,
   onClose,
 }) => {
   if (!isOpen) return null;
 
   const playersObj = room?.players || {};
+  const hasHistory =
+    Array.isArray(room?.matchHistory) && room!.matchHistory!.length > 0;
+
   const sortedStats = Object.keys(playersObj)
     .map((pId) => {
       const p = playersObj[Number(pId)];
+      const rc = p.rankCounts || [0, 0, 0, 0];
+      const totalRankedGames = rc[0] + rc[1] + rc[2] + rc[3];
+      const weightedSum = rc[0] * 1 + rc[1] * 2 + rc[2] * 3 + rc[3] * 4;
+      const avgRank =
+        totalRankedGames > 0
+          ? (weightedSum / totalRankedGames).toFixed(2)
+          : "-";
+
       return {
         id: p.id,
         name: p.name,
         pt: p.points || 0,
         games: p.totalGames || 0,
+        rankCounts: rc,
+        avgRank,
       };
     })
     .sort((a, b) => b.pt - a.pt);
@@ -34,31 +49,40 @@ export const StatsModal: React.FC<StatsModalProps> = ({
       <div className="full-modal-inner">
         <div className="modal-top-header text-center border-bottom">
           <h1 className="title">総合成績表</h1>
-          <p className="subtitle">現在のルーム: {roomName}</p>
+          <p className="subtitle">
+            現在のルーム: {roomName}（通算 {room?.gameCount || 0} 半荘）
+          </p>
         </div>
 
         <div className="modal-scroll-area">
-          <table className="result-table">
+          <table className="result-table stats-detail-table">
             <thead>
               <tr>
                 <th>プレイヤー</th>
-                <th className="text-center">対局数</th>
-                <th className="text-right">トータルポイント</th>
+                <th className="text-center">対局</th>
+                <th className="text-center">平均着順</th>
+                <th className="text-center">着順内訳(1-2-3-4)</th>
+                <th className="text-right">トータルpt</th>
               </tr>
             </thead>
             <tbody id="stats-table-body">
-              {sortedStats.map((item) => {
+              {sortedStats.map((item, idx) => {
                 const ptClass = item.pt >= 0 ? "pt-plus" : "pt-minus";
                 const ptSign = item.pt > 0 ? "+" : "";
                 return (
                   <tr key={item.id}>
                     <td>
-                      <strong>{item.name}</strong>{" "}
-                      <span style={{ fontSize: "10px", color: "#64748b" }}>
-                        (ID:{item.id})
-                      </span>
+                      <span className="stats-rank-num">{idx + 1}.</span>{" "}
+                      <strong>{item.name}</strong>
                     </td>
                     <td className="text-center font-mono">{item.games}</td>
+                    <td className="text-center font-mono">{item.avgRank}</td>
+                    <td
+                      className="text-center font-mono"
+                      style={{ fontSize: "12px", color: "#94a3b8" }}
+                    >
+                      {item.rankCounts.join("-")}
+                    </td>
                     <td className={`text-right font-mono ${ptClass}`}>
                       {ptSign}
                       {item.pt.toFixed(1)}
@@ -70,8 +94,23 @@ export const StatsModal: React.FC<StatsModalProps> = ({
           </table>
         </div>
 
-        <div className="modal-bottom-footer">
-          <button type="button" onClick={onClose} className="btn btn-dark">
+        <div className="modal-bottom-footer flex gap-2">
+          {hasHistory && (
+            <button
+              type="button"
+              onClick={onUndoLastMatchStats}
+              className="btn btn-rose"
+              style={{ flex: 0.8, fontSize: "13px" }}
+            >
+              ↩ 直前の半荘成績を取消
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn btn-dark"
+            style={{ flex: 1 }}
+          >
             成績表を閉じる
           </button>
         </div>
@@ -83,12 +122,16 @@ export const StatsModal: React.FC<StatsModalProps> = ({
 interface LogModalProps {
   isOpen: boolean;
   matchLogs: MatchLog[];
+  canUndo: boolean;
+  onUndoLastRound: () => void;
   onClose: () => void;
 }
 
 export const LogModal: React.FC<LogModalProps> = ({
   isOpen,
   matchLogs,
+  canUndo,
+  onUndoLastRound,
   onClose,
 }) => {
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -165,8 +208,23 @@ export const LogModal: React.FC<LogModalProps> = ({
           )}
         </div>
 
-        <div className="modal-bottom-footer">
-          <button type="button" onClick={onClose} className="btn btn-dark">
+        <div className="modal-bottom-footer flex gap-2">
+          {canUndo && (
+            <button
+              type="button"
+              onClick={onUndoLastRound}
+              className="btn btn-amber"
+              style={{ flex: 0.85, fontSize: "13px" }}
+            >
+              ↩ 直前の1局をやり直す
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn btn-dark"
+            style={{ flex: 1 }}
+          >
             閉じる
           </button>
         </div>
@@ -177,7 +235,7 @@ export const LogModal: React.FC<LogModalProps> = ({
 
 interface TransferResultModalProps {
   data: TransferModalData;
-  onConfirmNext: () => void;
+  onConfirmNext: (forceEndMatch?: boolean) => void;
 }
 
 export const TransferResultModal: React.FC<TransferResultModalProps> = ({
@@ -229,17 +287,64 @@ export const TransferResultModal: React.FC<TransferResultModalProps> = ({
           />
         )}
 
-        <div className="modal-footer">
-          <button
-            type="button"
-            className="btn btn-emerald"
-            onClick={onConfirmNext}
-          >
-            {data.isTobiEnd ? "終局・精算画面へ" : "次局へ進む"}
-          </button>
+        <div className="modal-footer flex flex-col gap-1">
+          {data.isTobiEnd ? (
+            <button
+              type="button"
+              className="btn btn-rose"
+              onClick={() => onConfirmNext(true)}
+            >
+              🚨 コールド終局・精算画面へ
+            </button>
+          ) : data.isAllLastEnd ? (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="btn btn-dark-sub"
+                style={{ flex: 0.75 }}
+                onClick={() => onConfirmNext(false)}
+              >
+                延長戦(西入/南入)へ
+              </button>
+              <button
+                type="button"
+                className="btn btn-amber"
+                style={{ flex: 1.25 }}
+                onClick={() => onConfirmNext(true)}
+              >
+                🏆 オーラス終局・精算へ
+              </button>
+            </div>
+          ) : data.canAgariYame ? (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="btn btn-emerald"
+                style={{ flex: 1 }}
+                onClick={() => onConfirmNext(false)}
+              >
+                連荘して次局へ
+              </button>
+              <button
+                type="button"
+                className="btn btn-amber"
+                style={{ flex: 1.15 }}
+                onClick={() => onConfirmNext(true)}
+              >
+                🏆 アガリ/聴牌止めで終局
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-emerald"
+              onClick={() => onConfirmNext(false)}
+            >
+              {data.isSameKyokuRetry ? "同局やり直しへ進む" : "次局へ進む"}
+            </button>
+          )}
         </div>
       </div>
     </div>
   );
 };
-

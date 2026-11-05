@@ -21,13 +21,17 @@ interface MatchScreenProps {
   rules: CustomRules;
   dice: DiceState;
   matchCalc: MatchCalcState;
+  canUndo: boolean;
   getPlayerName: (id: number) => string;
   onRollDice: () => void;
-  onDeclareRiichi: (playerId: number) => void;
+  onToggleRiichi: (playerId: number) => void;
   onManualScoreChange: (playerId: number, score: number) => void;
   onUpdateMatchCalc: (partial: Partial<MatchCalcState>) => void;
   onClearRoleSlots: () => void;
   onExecutePointTransfer: () => void;
+  onExecuteAbortiveDraw: (isRenchan: boolean) => void;
+  onExecuteChombo: () => void;
+  onUndoLastRound: () => void;
   onOpenLogModal: () => void;
   onEndMatch: () => void;
 }
@@ -52,13 +56,17 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
   rules,
   dice,
   matchCalc,
+  canUndo,
   getPlayerName,
   onRollDice,
-  onDeclareRiichi,
+  onToggleRiichi,
   onManualScoreChange,
   onUpdateMatchCalc,
   onClearRoleSlots,
   onExecutePointTransfer,
+  onExecuteAbortiveDraw,
+  onExecuteChombo,
+  onUndoLastRound,
   onOpenLogModal,
   onEndMatch,
 }) => {
@@ -74,7 +82,7 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
   } | null>(null);
   const touchMovedRef = useRef(false);
 
-  const oyaWind = currentWind === 0 ? "東" : "南";
+  const oyaWind = WIND_LABELS[currentWind] || "東";
   const roundStr = `${oyaWind}${currentKyoku}局`;
   const oyaIndex = (currentKyoku - 1) % tableSize;
   const isSanma = tableSize === 3;
@@ -85,13 +93,13 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
   const assignToRole = (
     playerId: number,
     role: "winner" | "loser",
-    toggleIfTenpai = false
+    toggleIfExist = false
   ) => {
     if (role === "winner") {
       if (matchCalc.type === "tenpai") {
         const exists = matchCalc.winners.includes(playerId);
         if (exists) {
-          if (toggleIfTenpai && !riichiPlayers.includes(playerId)) {
+          if (toggleIfExist && !riichiPlayers.includes(playerId)) {
             onUpdateMatchCalc({
               winners: matchCalc.winners.filter((id) => id !== playerId),
             });
@@ -99,12 +107,33 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
         } else {
           onUpdateMatchCalc({ winners: [...matchCalc.winners, playerId] });
         }
+      } else if (matchCalc.type === "ron") {
+        // ダブロン対応：最大2名（または3名）まで和了者枠に追加可能
+        const exists = matchCalc.winners.includes(playerId);
+        if (exists) {
+          if (toggleIfExist) {
+            onUpdateMatchCalc({
+              winners: matchCalc.winners.filter((id) => id !== playerId),
+            });
+          }
+        } else {
+          const maxWinners = Math.max(1, tableSize - 1);
+          const filtered = matchCalc.winners.slice(0, maxWinners - 1);
+          const nextLoser =
+            matchCalc.loser === playerId ? null : matchCalc.loser;
+          onUpdateMatchCalc({
+            winners: [...filtered, playerId],
+            loser: nextLoser,
+          });
+        }
       } else {
+        // ツモ または 特殊（チョンボ対象者）は1名のみ
         onUpdateMatchCalc({ winners: [playerId] });
       }
     } else {
-      if (matchCalc.type === "tenpai") return;
-      onUpdateMatchCalc({ loser: playerId });
+      if (matchCalc.type === "tenpai" || matchCalc.type === "special") return;
+      const nextWinners = matchCalc.winners.filter((id) => id !== playerId);
+      onUpdateMatchCalc({ loser: playerId, winners: nextWinners });
     }
   };
 
@@ -113,16 +142,24 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
     if (touchMovedRef.current) return;
     if (matchCalc.type === "tenpai") {
       assignToRole(playerId, "winner", true);
-    } else if (matchCalc.type === "tsumo") {
-      assignToRole(playerId, "winner");
+    } else if (matchCalc.type === "tsumo" || matchCalc.type === "special") {
+      assignToRole(playerId, "winner", true);
     } else {
-      // ロンの場合：和了者が未設定なら和了者へ、すでに別の和了者がいれば放銃者へ
-      if (matchCalc.winners.length === 0) {
-        assignToRole(playerId, "winner");
-      } else if (matchCalc.winners[0] === playerId) {
-        onUpdateMatchCalc({ winners: [] });
+      // ロンの場合：
+      // 1人目タップ➔和了者、2人目タップ➔放銃者、3人目タップ➔2人目の和了者（ダブロン）
+      if (matchCalc.winners.includes(playerId)) {
+        onUpdateMatchCalc({
+          winners: matchCalc.winners.filter((id) => id !== playerId),
+        });
+      } else if (matchCalc.loser === playerId) {
+        onUpdateMatchCalc({ loser: null });
+      } else if (matchCalc.winners.length === 0) {
+        onUpdateMatchCalc({ winners: [playerId] });
+      } else if (matchCalc.loser === null) {
+        onUpdateMatchCalc({ loser: playerId });
       } else {
-        assignToRole(playerId, "loser");
+        // すでに和了者と放銃者がいる状態で別プレイヤーをタップしたらダブロン追加
+        assignToRole(playerId, "winner");
       }
     }
   };
@@ -140,6 +177,19 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
     onUpdateMatchCalc({
       scale: matchCalc.scale === scale ? null : scale,
     });
+  };
+
+  const handleLandscapeScorePrompt = (playerId: number, currentScore: number) => {
+    const input = window.prompt(
+      `${getPlayerName(playerId)} の持ち点を直接修正:`,
+      String(currentScore)
+    );
+    if (input !== null) {
+      const parsed = parseInt(input, 10);
+      if (!Number.isNaN(parsed)) {
+        onManualScoreChange(playerId, parsed);
+      }
+    }
   };
 
   // Touch Drag & Drop
@@ -172,7 +222,8 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
       setDragOverTarget("winner");
     } else if (
       targetEl.closest(".loser-target") &&
-      matchCalc.type !== "tenpai"
+      matchCalc.type !== "tenpai" &&
+      matchCalc.type !== "special"
     ) {
       setDragOverTarget("loser");
     } else {
@@ -189,7 +240,8 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
           assignToRole(playerId, "winner");
         } else if (
           targetEl.closest(".loser-target") &&
-          matchCalc.type !== "tenpai"
+          matchCalc.type !== "tenpai" &&
+          matchCalc.type !== "special"
         ) {
           assignToRole(playerId, "loser");
         }
@@ -205,13 +257,22 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
 
   const isTenpai = matchCalc.type === "tenpai";
   const isTsumo = matchCalc.type === "tsumo";
+  const isSpecial = matchCalc.type === "special";
+  const isDoubleRon =
+    matchCalc.type === "ron" && matchCalc.winners.length >= 2;
 
-  const winnerLabelText = isTenpai
-    ? "⭕ 聴牌者 (それ以外はノーテン)"
-    : "🏆 和了者 (アガリ)";
-  const loserLabelText = isTenpai
-    ? "❌ （聴牌時は不使用）"
-    : "🎯 放銃者 (ロンの場合)";
+  const winnerLabelText = isSpecial
+    ? "🚨 チョンボ者 (錯和のみ)"
+    : isTenpai
+    ? "⭕ 聴牌者 (他はノーテン)"
+    : isDoubleRon
+    ? `🏆 和了者 (ダブロン ${matchCalc.winners.length}名)`
+    : "🏆 和了者 (ダブロン可)";
+
+  const loserLabelText =
+    isTenpai || isSpecial
+      ? "❌ （不使用）"
+      : "🎯 放銃者 (ロンの場合)";
 
   const renderRoleSlotContent = (
     role: "winner" | "loser",
@@ -255,6 +316,93 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
     }
   };
 
+  const renderScaleButtons = (isLandscape: boolean) => (
+    <div className={`scale-buttons-grid ${isLandscape ? "ls-scale-grid" : ""}`}>
+      <button
+        type="button"
+        className={`btn-scale btn-scale-lg ${
+          isLandscape ? "ls-btn-scale" : ""
+        } ${matchCalc.scale === "mangan" ? "active" : ""}`}
+        onClick={() => handleToggleScale("mangan")}
+      >
+        満貫
+      </button>
+      <button
+        type="button"
+        className={`btn-scale btn-scale-lg ${
+          isLandscape ? "ls-btn-scale" : ""
+        } ${matchCalc.scale === "hanman" ? "active" : ""}`}
+        onClick={() => handleToggleScale("hanman")}
+      >
+        跳満
+      </button>
+      <button
+        type="button"
+        className={`btn-scale btn-scale-lg ${
+          isLandscape ? "ls-btn-scale" : ""
+        } ${matchCalc.scale === "baiman" ? "active" : ""}`}
+        onClick={() => handleToggleScale("baiman")}
+      >
+        倍満
+      </button>
+      <button
+        type="button"
+        className={`btn-scale btn-scale-sm3 ${
+          isLandscape ? "ls-btn-scale-sm" : ""
+        } ${matchCalc.scale === "sanbaiman" ? "active" : ""}`}
+        onClick={() => handleToggleScale("sanbaiman")}
+      >
+        3倍満
+      </button>
+      <button
+        type="button"
+        className={`btn-scale btn-scale-sm3 ${
+          isLandscape ? "ls-btn-scale-sm" : ""
+        } ${matchCalc.scale === "yakuman" ? "active" : ""}`}
+        onClick={() => handleToggleScale("yakuman")}
+      >
+        役満
+      </button>
+      <button
+        type="button"
+        className={`btn-scale btn-scale-sm3 ${
+          isLandscape ? "ls-btn-scale-sm" : ""
+        } ${matchCalc.scale === "double_yakuman" ? "active" : ""}`}
+        onClick={() => handleToggleScale("double_yakuman")}
+      >
+        W役満
+      </button>
+    </div>
+  );
+
+  const renderSpecialActions = (isLandscape: boolean) => (
+    <div className={`special-actions-box ${isLandscape ? "ls-special-box" : ""}`}>
+      <div className="flex gap-1">
+        <button
+          type="button"
+          onClick={() => onExecuteAbortiveDraw(true)}
+          className="btn-special-action btn-special-amber flex-1"
+        >
+          🔄 途中流局 (親連荘)
+        </button>
+        <button
+          type="button"
+          onClick={() => onExecuteAbortiveDraw(false)}
+          className="btn-special-action btn-special-sky flex-1"
+        >
+          ➡️ 途中流局 (親流れ)
+        </button>
+      </div>
+      <button
+        type="button"
+        onClick={onExecuteChombo}
+        className="btn-special-action btn-special-rose"
+      >
+        🚨 チョンボ精算（満貫払い・同局やり直し）
+      </button>
+    </div>
+  );
+
   return (
     <div id="screen-match" className="screen">
       {/* ========================================== */}
@@ -263,7 +411,10 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
       <div className="view-portrait flex-1 flex-column">
         <div className="card bg-dark-header match-portrait-header flex justify-between items-center">
           <div className="flex items-center flex-wrap">
-            <span className="text-2xl font-black text-amber" id="current-wind-label">
+            <span
+              className="text-2xl font-black text-amber"
+              id="current-wind-label"
+            >
               {oyaWind}
             </span>
             <span
@@ -280,16 +431,30 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
               供託 {kyotakuCount}本
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            {canUndo && (
+              <button
+                type="button"
+                onClick={onUndoLastRound}
+                className="btn-undo-header"
+                title="1局前の状態に戻す"
+              >
+                ↩ 戻す
+              </button>
+            )}
             <button
               type="button"
               onClick={onOpenLogModal}
               className="btn-dark-sub btn"
-              style={{ width: "auto", padding: "6px 10px", fontSize: "11px" }}
+              style={{ width: "auto", padding: "6px 8px", fontSize: "11px" }}
             >
-              点数ログ
+              ログ
             </button>
-            <button type="button" onClick={onEndMatch} className="btn-end-header">
+            <button
+              type="button"
+              onClick={onEndMatch}
+              className="btn-end-header"
+            >
               終局
             </button>
           </div>
@@ -323,7 +488,7 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
                 fontSize: "11px",
               }}
             >
-              現在の持ち点（名前をドラッグまたはタップで精算枠へ）
+              現在の持ち点（立直は再タップで取消可 / 名前をドロップまたはタップ）
             </div>
             <div id="match-players-list" className="table-rows">
               {activePlayers.slice(0, tableSize).map((pId, idx) => {
@@ -350,11 +515,10 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
                       </span>
                       <button
                         type="button"
-                        onClick={() => onDeclareRiichi(pId)}
+                        onClick={() => onToggleRiichi(pId)}
                         className={`btn-riichi ${isRiichi ? "active-riichi" : ""}`}
-                        disabled={isRiichi}
                       >
-                        {isRiichi ? "立直中" : "立直"}
+                        {isRiichi ? "立直中✕" : "立直"}
                       </button>
                       <div
                         id={`m-chip-${pId}`}
@@ -380,7 +544,10 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
                       step={100}
                       className="input-score"
                       onChange={(e) =>
-                        onManualScoreChange(pId, parseInt(e.target.value, 10) || 0)
+                        onManualScoreChange(
+                          pId,
+                          parseInt(e.target.value, 10) || 0
+                        )
                       }
                     />
                   </div>
@@ -399,7 +566,11 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
                   </div>
                   <span
                     className="font-mono font-bold"
-                    style={{ color: "#64748b", fontSize: "16px", paddingRight: "8px" }}
+                    style={{
+                      color: "#64748b",
+                      fontSize: "16px",
+                      paddingRight: "8px",
+                    }}
                   >
                     {(currentPoints[subPlayer] ?? startPoints).toLocaleString()}
                   </span>
@@ -449,9 +620,11 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
                 className={`role-box loser-target ${
                   dragOverTarget === "loser" ? "drag-over" : ""
                 }`}
-                style={{ opacity: isTenpai ? 0.2 : isTsumo ? 0.3 : 1 }}
+                style={{
+                  opacity: isTenpai || isSpecial ? 0.2 : isTsumo ? 0.3 : 1,
+                }}
                 onDragOver={(e) => {
-                  if (isTenpai) return;
+                  if (isTenpai || isSpecial) return;
                   e.preventDefault();
                   setDragOverTarget("loser");
                 }}
@@ -459,7 +632,7 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
                 onDrop={(e) => {
                   e.preventDefault();
                   setDragOverTarget(null);
-                  if (draggingPlayerId !== null && !isTenpai) {
+                  if (draggingPlayerId !== null && !isTenpai && !isSpecial) {
                     assignToRole(draggingPlayerId, "loser");
                     setDraggingPlayerId(null);
                   }
@@ -474,7 +647,7 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
               </div>
             </div>
 
-            <div className="flex gap-2 mb-2">
+            <div className="flex gap-1 mb-2">
               <button
                 type="button"
                 onClick={() => handleSetAgariType("ron")}
@@ -505,6 +678,16 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
               </button>
               <button
                 type="button"
+                onClick={() => handleSetAgariType("special")}
+                id="btn-agari-special"
+                className={`btn-type ${
+                  matchCalc.type === "special" ? "active-special" : ""
+                }`}
+              >
+                特殊
+              </button>
+              <button
+                type="button"
                 onClick={onClearRoleSlots}
                 className="btn-clear"
               >
@@ -512,105 +695,65 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
               </button>
             </div>
 
-            {!isTenpai && (
+            {isSpecial ? (
+              renderSpecialActions(false)
+            ) : (
               <>
-                <div id="panel-detail-box" className="flex gap-2 mb-2">
-                  <div className="flex-1">
-                    <select
-                      id="select-fu"
-                      className="inline-select-sm"
-                      value={matchCalc.fu}
-                      onChange={(e) =>
-                        onUpdateMatchCalc({ fu: Number(e.target.value) })
-                      }
-                    >
-                      <option value={20}>20符（ピンフツモなど）</option>
-                      <option value={25}>25符（七対子）</option>
-                      <option value={30}>30符</option>
-                      <option value={40}>40符</option>
-                      <option value={50}>50符</option>
-                      <option value={60}>60符</option>
-                      <option value={70}>70符</option>
-                      <option value={80}>80符以上</option>
-                    </select>
-                  </div>
-                  <div className="flex-1">
-                    <select
-                      id="select-han"
-                      className="inline-select-sm"
-                      value={matchCalc.han}
-                      onChange={(e) =>
-                        onUpdateMatchCalc({ han: Number(e.target.value) })
-                      }
-                    >
-                      <option value={1}>1翻</option>
-                      <option value={2}>2翻</option>
-                      <option value={3}>3翻</option>
-                      <option value={4}>4翻</option>
-                    </select>
-                  </div>
-                </div>
+                {!isTenpai && (
+                  <>
+                    <div id="panel-detail-box" className="flex gap-2 mb-2">
+                      <div className="flex-1">
+                        <select
+                          id="select-fu"
+                          className="inline-select-sm"
+                          value={matchCalc.fu}
+                          onChange={(e) =>
+                            onUpdateMatchCalc({ fu: Number(e.target.value) })
+                          }
+                        >
+                          <option value={20}>20符（ピンフツモなど）</option>
+                          <option value={25}>25符（七対子）</option>
+                          <option value={30}>30符</option>
+                          <option value={40}>40符</option>
+                          <option value={50}>50符</option>
+                          <option value={60}>60符</option>
+                          <option value={70}>70符</option>
+                          <option value={80}>80符以上</option>
+                        </select>
+                      </div>
+                      <div className="flex-1">
+                        <select
+                          id="select-han"
+                          className="inline-select-sm"
+                          value={matchCalc.han}
+                          onChange={(e) =>
+                            onUpdateMatchCalc({ han: Number(e.target.value) })
+                          }
+                        >
+                          <option value={1}>1翻</option>
+                          <option value={2}>2翻</option>
+                          <option value={3}>3翻</option>
+                          <option value={4}>4翻</option>
+                        </select>
+                      </div>
+                    </div>
 
-                <div id="panel-scale-box" className="mb-2">
-                  <div className="input-label-sm">【満貫クラス】</div>
-                  <div className="scale-buttons-grid">
-                    <button
-                      type="button"
-                      className={`btn-scale btn-scale-lg ${
-                        matchCalc.scale === "mangan" ? "active" : ""
-                      }`}
-                      onClick={() => handleToggleScale("mangan")}
-                    >
-                      満貫
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn-scale btn-scale-lg ${
-                        matchCalc.scale === "hanman" ? "active" : ""
-                      }`}
-                      onClick={() => handleToggleScale("hanman")}
-                    >
-                      跳満
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn-scale btn-scale-lg ${
-                        matchCalc.scale === "baiman" ? "active" : ""
-                      }`}
-                      onClick={() => handleToggleScale("baiman")}
-                    >
-                      倍満
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn-scale btn-scale-sm ${
-                        matchCalc.scale === "sanbaiman" ? "active" : ""
-                      }`}
-                      onClick={() => handleToggleScale("sanbaiman")}
-                    >
-                      3倍満
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn-scale btn-scale-sm ${
-                        matchCalc.scale === "yakuman" ? "active" : ""
-                      }`}
-                      onClick={() => handleToggleScale("yakuman")}
-                    >
-                      役満
-                    </button>
-                  </div>
-                </div>
+                    <div id="panel-scale-box" className="mb-2">
+                      <div className="input-label-sm">【満貫クラス】</div>
+                      {renderScaleButtons(false)}
+                    </div>
+                  </>
+                )}
+
+                <button
+                  type="button"
+                  onClick={onExecutePointTransfer}
+                  className="btn-execute mt-2"
+                >
+                  ⚡ 計算して点数を移動する
+                </button>
               </>
             )}
-
-            <button
-              type="button"
-              onClick={onExecutePointTransfer}
-              className="btn-execute mt-2"
-            >
-              ⚡ 計算して点数を移動する
-            </button>
           </div>
         </div>
       </div>
@@ -634,7 +777,6 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
 
             {/* 4つの座席（手前・右・奥・左） */}
             {LANDSCAPE_SEAT_CONFIG.map((seatCfg, physicalIndex) => {
-              // 3人打ち（通常）の4席目は不使用
               if (isSanma && !is43Mode && physicalIndex === 3) {
                 return (
                   <div
@@ -657,7 +799,6 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
                 );
               }
 
-              // 4人3打ちの4席目は控え（抜け番）
               if (is43Mode && physicalIndex === 3) {
                 const subId = subPlayer;
                 const subScore =
@@ -717,11 +858,10 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
                       </span>
                       <button
                         type="button"
-                        onClick={() => onDeclareRiichi(pId)}
+                        onClick={() => onToggleRiichi(pId)}
                         className={`btn-riichi ${isRiichi ? "active-riichi" : ""}`}
-                        disabled={isRiichi}
                       >
-                        {isRiichi ? "立直中" : "立直"}
+                        {isRiichi ? "立直中✕" : "立直"}
                       </button>
                     </div>
                     <div
@@ -741,7 +881,11 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
                       {getPlayerName(pId)}
                     </div>
                   </div>
-                  <div className="seat-score-row">
+                  <div
+                    className="seat-score-row"
+                    onClick={() => handleLandscapeScorePrompt(pId, pScore)}
+                    title="タップして点数を直接修正"
+                  >
                     <span className="seat-score-text">
                       {pScore.toLocaleString()}
                     </span>
@@ -760,7 +904,10 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
           {/* ヘッダー操作行 */}
           <div className="card bg-dark-header ls-header-card flex justify-between items-center">
             <div className="flex items-center">
-              <span className="font-black text-amber ls-round-txt" id="ls-wind-label">
+              <span
+                className="font-black text-amber ls-round-txt"
+                id="ls-wind-label"
+              >
                 {oyaWind}
               </span>
               <span
@@ -769,7 +916,10 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
               >
                 {currentKyoku}
               </span>
-              <span className="font-bold text-amber" style={{ fontSize: "12px" }}>
+              <span
+                className="font-bold text-amber"
+                style={{ fontSize: "12px" }}
+              >
                 局
               </span>
               <span id="ls-honba" className="badge-honba ls-badge-honba">
@@ -777,6 +927,16 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
               </span>
             </div>
             <div className="flex items-center gap-1">
+              {canUndo && (
+                <button
+                  type="button"
+                  onClick={onUndoLastRound}
+                  className="btn-undo-header ls-undo-btn"
+                  title="1局前の状態に戻す"
+                >
+                  ↩戻す
+                </button>
+              )}
               <button
                 type="button"
                 onClick={onOpenLogModal}
@@ -850,6 +1010,16 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
               </button>
               <button
                 type="button"
+                onClick={() => handleSetAgariType("special")}
+                id="ls-btn-agari-special"
+                className={`btn-type ls-btn-type ${
+                  matchCalc.type === "special" ? "active-special" : ""
+                }`}
+              >
+                特殊
+              </button>
+              <button
+                type="button"
                 onClick={onClearRoleSlots}
                 className="btn-clear ls-btn-clear"
               >
@@ -877,8 +1047,17 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
                   }
                 }}
               >
-                <span className="role-label ls-role-label" id="ls-role-winner-label">
-                  {isTenpai ? "⭕ 聴牌" : "🏆 和了"}
+                <span
+                  className="role-label ls-role-label"
+                  id="ls-role-winner-label"
+                >
+                  {isSpecial
+                    ? "🚨 チョンボ者"
+                    : isTenpai
+                    ? "⭕ 聴牌"
+                    : isDoubleRon
+                    ? `🏆 ダブロン(${matchCalc.winners.length})`
+                    : "🏆 和了"}
                 </span>
                 <div
                   className="role-slot flex-wrap-gap ls-role-slot"
@@ -893,9 +1072,11 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
                 className={`role-box loser-target ls-role-box ${
                   dragOverTarget === "loser" ? "drag-over" : ""
                 }`}
-                style={{ opacity: isTenpai ? 0.2 : isTsumo ? 0.3 : 1 }}
+                style={{
+                  opacity: isTenpai || isSpecial ? 0.2 : isTsumo ? 0.3 : 1,
+                }}
                 onDragOver={(e) => {
-                  if (isTenpai) return;
+                  if (isTenpai || isSpecial) return;
                   e.preventDefault();
                   setDragOverTarget("loser");
                 }}
@@ -903,14 +1084,17 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
                 onDrop={(e) => {
                   e.preventDefault();
                   setDragOverTarget(null);
-                  if (draggingPlayerId !== null && !isTenpai) {
+                  if (draggingPlayerId !== null && !isTenpai && !isSpecial) {
                     assignToRole(draggingPlayerId, "loser");
                     setDraggingPlayerId(null);
                   }
                 }}
               >
-                <span className="role-label ls-role-label" id="ls-role-loser-label">
-                  {isTenpai ? "❌ 不使用" : "🎯 放銃"}
+                <span
+                  className="role-label ls-role-label"
+                  id="ls-role-loser-label"
+                >
+                  {isTenpai || isSpecial ? "❌ 不使用" : "🎯 放銃"}
                 </span>
                 <div
                   className="role-slot flex-wrap-gap ls-role-slot"
@@ -921,104 +1105,67 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
               </div>
             </div>
 
-            {!isTenpai && (
+            {isSpecial ? (
+              renderSpecialActions(true)
+            ) : (
               <>
-                <div id="ls-panel-detail-box" className="flex gap-1 ls-detail-row">
-                  <div className="flex-1">
-                    <select
-                      id="ls-select-fu"
-                      className="inline-select-sm ls-select-sm"
-                      value={matchCalc.fu}
-                      onChange={(e) =>
-                        onUpdateMatchCalc({ fu: Number(e.target.value) })
-                      }
+                {!isTenpai && (
+                  <>
+                    <div
+                      id="ls-panel-detail-box"
+                      className="flex gap-1 ls-detail-row"
                     >
-                      <option value={20}>20符</option>
-                      <option value={25}>25符</option>
-                      <option value={30}>30符</option>
-                      <option value={40}>40符</option>
-                      <option value={50}>50符</option>
-                      <option value={60}>60符</option>
-                      <option value={70}>70符</option>
-                      <option value={80}>80符以上</option>
-                    </select>
-                  </div>
-                  <div className="flex-1">
-                    <select
-                      id="ls-select-han"
-                      className="inline-select-sm ls-select-sm"
-                      value={matchCalc.han}
-                      onChange={(e) =>
-                        onUpdateMatchCalc({ han: Number(e.target.value) })
-                      }
-                    >
-                      <option value={1}>1翻</option>
-                      <option value={2}>2翻</option>
-                      <option value={3}>3翻</option>
-                      <option value={4}>4翻</option>
-                    </select>
-                  </div>
-                </div>
+                      <div className="flex-1">
+                        <select
+                          id="ls-select-fu"
+                          className="inline-select-sm ls-select-sm"
+                          value={matchCalc.fu}
+                          onChange={(e) =>
+                            onUpdateMatchCalc({ fu: Number(e.target.value) })
+                          }
+                        >
+                          <option value={20}>20符</option>
+                          <option value={25}>25符</option>
+                          <option value={30}>30符</option>
+                          <option value={40}>40符</option>
+                          <option value={50}>50符</option>
+                          <option value={60}>60符</option>
+                          <option value={70}>70符</option>
+                          <option value={80}>80符以上</option>
+                        </select>
+                      </div>
+                      <div className="flex-1">
+                        <select
+                          id="ls-select-han"
+                          className="inline-select-sm ls-select-sm"
+                          value={matchCalc.han}
+                          onChange={(e) =>
+                            onUpdateMatchCalc({ han: Number(e.target.value) })
+                          }
+                        >
+                          <option value={1}>1翻</option>
+                          <option value={2}>2翻</option>
+                          <option value={3}>3翻</option>
+                          <option value={4}>4翻</option>
+                        </select>
+                      </div>
+                    </div>
 
-                <div id="ls-panel-scale-box" className="ls-scale-box">
-                  <div className="scale-buttons-grid ls-scale-grid">
-                    <button
-                      type="button"
-                      className={`btn-scale btn-scale-lg ls-btn-scale ${
-                        matchCalc.scale === "mangan" ? "active" : ""
-                      }`}
-                      onClick={() => handleToggleScale("mangan")}
-                    >
-                      満貫
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn-scale btn-scale-lg ls-btn-scale ${
-                        matchCalc.scale === "hanman" ? "active" : ""
-                      }`}
-                      onClick={() => handleToggleScale("hanman")}
-                    >
-                      跳満
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn-scale btn-scale-lg ls-btn-scale ${
-                        matchCalc.scale === "baiman" ? "active" : ""
-                      }`}
-                      onClick={() => handleToggleScale("baiman")}
-                    >
-                      倍満
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn-scale btn-scale-sm ls-btn-scale-sm ${
-                        matchCalc.scale === "sanbaiman" ? "active" : ""
-                      }`}
-                      onClick={() => handleToggleScale("sanbaiman")}
-                    >
-                      3倍満
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn-scale btn-scale-sm ls-btn-scale-sm ${
-                        matchCalc.scale === "yakuman" ? "active" : ""
-                      }`}
-                      onClick={() => handleToggleScale("yakuman")}
-                    >
-                      役満
-                    </button>
-                  </div>
-                </div>
+                    <div id="ls-panel-scale-box" className="ls-scale-box">
+                      {renderScaleButtons(true)}
+                    </div>
+                  </>
+                )}
+
+                <button
+                  type="button"
+                  onClick={onExecutePointTransfer}
+                  className="btn-execute ls-btn-execute"
+                >
+                  ⚡ 計算して点数を移動する
+                </button>
               </>
             )}
-
-            <button
-              type="button"
-              onClick={onExecutePointTransfer}
-              className="btn-execute ls-btn-execute"
-            >
-              ⚡ 計算して点数を移動する
-            </button>
           </div>
         </div>
       </div>
@@ -1038,4 +1185,3 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
     </div>
   );
 };
-

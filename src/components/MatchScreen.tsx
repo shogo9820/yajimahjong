@@ -244,7 +244,9 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
     if (diffBasePlayerId === null) {
       return {
         text: rawScore.toLocaleString(),
+        diffText: rawScore.toLocaleString(),
         mode: "normal" as const,
+        lsMode: "normal" as const,
         tsumoLabel: "",
         directRonLabel: "",
       };
@@ -254,14 +256,18 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
       if (diffViewMode === "condition") {
         return {
           text: `逆転基準 ${rawScore.toLocaleString()}`,
+          diffText: `基準 ${rawScore.toLocaleString()}`,
           mode: "base-cond" as const,
+          lsMode: "base-cond" as const,
           tsumoLabel: "",
           directRonLabel: "",
         };
       }
       return {
         text: `基準 ${rawScore.toLocaleString()}`,
+        diffText: `基準 ${rawScore.toLocaleString()}`,
         mode: "base" as const,
+        lsMode: "base" as const,
         tsumoLabel: "",
         directRonLabel: "",
       };
@@ -270,16 +276,20 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
     const baseScore = currentPoints[diffBasePlayerId] ?? startPoints;
     const diff = rawScore - baseScore;
     const sign = diff > 0 ? "+" : diff < 0 ? "" : "±";
+    const diffMode =
+      diff > 0
+        ? ("plus" as const)
+        : diff < 0
+        ? ("minus" as const)
+        : ("zero" as const);
+    const formattedDiff = `${sign}${diff.toLocaleString()}`;
 
     if (diffViewMode === "diff") {
       return {
-        text: `${sign}${diff.toLocaleString()}`,
-        mode:
-          diff > 0
-            ? ("plus" as const)
-            : diff < 0
-            ? ("minus" as const)
-            : ("zero" as const),
+        text: formattedDiff,
+        diffText: formattedDiff,
+        mode: diffMode,
+        lsMode: diffMode,
         tsumoLabel: "",
         directRonLabel: "",
       };
@@ -308,8 +318,10 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
 
     if (cond.isAhead) {
       return {
-        text: `先行 (${sign}${diff.toLocaleString()})`,
+        text: `先行 (${formattedDiff})`,
+        diffText: formattedDiff,
         mode: "ahead" as const,
+        lsMode: diffMode,
         tsumoLabel: "",
         directRonLabel: "",
       };
@@ -317,10 +329,120 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
 
     return {
       text: `ツモ${cond.tsumoLabel} / 直${cond.directRonLabel}`,
+      diffText: formattedDiff,
       mode: "cond" as const,
+      lsMode: diffMode,
       tsumoLabel: cond.tsumoLabel,
       directRonLabel: cond.directRonLabel,
     };
+  };
+
+  // 横持ち時：卓の中央（供託表示の上）に、タップしたプレイヤーの向きで正方形・6段の逆転条件確認表を表示
+  const renderCenterConditionSquare = () => {
+    if (diffBasePlayerId === null || diffViewMode !== "condition") {
+      return null;
+    }
+
+    const baseSeatIdx = activePlayers
+      .slice(0, tableSize)
+      .indexOf(diffBasePlayerId);
+    const rotationDeg =
+      baseSeatIdx === 1
+        ? -90
+        : baseSeatIdx === 2
+        ? 180
+        : baseSeatIdx === 3
+        ? 90
+        : 0;
+
+    const baseScore = currentPoints[diffBasePlayerId] ?? startPoints;
+    const opponents = activePlayers
+      .slice(0, tableSize)
+      .filter((id) => id !== diffBasePlayerId)
+      .sort((a, b) => (currentPoints[b] ?? startPoints) - (currentPoints[a] ?? startPoints));
+
+    return (
+      <div
+        className="center-cond-square"
+        style={{
+          transform: `translate(-50%, -50%) rotate(${rotationDeg}deg)`,
+        }}
+        onClick={() => {
+          if (diffTimerRef.current !== null) {
+            window.clearTimeout(diffTimerRef.current);
+            diffTimerRef.current = null;
+          }
+          setDiffBasePlayerId(null);
+          setDiffViewMode("diff");
+        }}
+        title="タップで閉じる"
+      >
+        <div className="center-cond-header">
+          🎯 {getPlayerName(diffBasePlayerId)} の逆転条件
+        </div>
+        <table className="center-cond-table">
+          <tbody>
+            {opponents.map((oppId) => {
+              const oppScore = currentPoints[oppId] ?? startPoints;
+              const diff = oppScore - baseScore;
+              const sign = diff > 0 ? "+" : diff < 0 ? "" : "±";
+              const targetSeatIdx = activePlayers.indexOf(oppId);
+              const canOvertakeOnTie =
+                rules.tieBreaker === "kamicha" &&
+                baseSeatIdx !== -1 &&
+                targetSeatIdx !== -1 &&
+                baseSeatIdx < targetSeatIdx;
+
+              const cond = calcComebackCondition({
+                baseScore,
+                targetScore: oppScore,
+                isBaseOya: diffBasePlayerId === currentOyaId,
+                isTargetOya: oppId === currentOyaId,
+                honbaCount,
+                kyotakuCount,
+                tableSize,
+                sanmaTsumo: rules.sanmaTsumo,
+                canOvertakeOnTie,
+              });
+
+              return (
+                <React.Fragment key={oppId}>
+                  <tr className="cond-row-top">
+                    <td rowSpan={2} className="cond-cell-player">
+                      <div className="cond-player-name">
+                        {getPlayerName(oppId)}
+                      </div>
+                      <div
+                        className={`cond-player-diff ${
+                          diff > 0
+                            ? "text-sky"
+                            : diff < 0
+                            ? "text-emerald"
+                            : "text-slate"
+                        }`}
+                      >
+                        {sign}
+                        {diff.toLocaleString()}
+                      </div>
+                    </td>
+                    <td className="cond-cell-type cond-type-tsumo">ツモ</td>
+                    <td className="cond-cell-val cond-val-tsumo">
+                      {cond.isAhead ? "先行中" : cond.tsumoLabel}
+                    </td>
+                  </tr>
+                  <tr className="cond-row-bottom">
+                    <td className="cond-cell-type cond-type-ron">直撃</td>
+                    <td className="cond-cell-val cond-val-ron">
+                      {cond.isAhead ? "リード" : cond.directRonLabel}
+                    </td>
+                  </tr>
+                </React.Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
   };
 
   const assignToRole = (
@@ -1186,6 +1308,9 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
               </span>
             </div>
 
+            {/* 2回タップ時：中央ハブの上に正方形・6段の逆転条件確認表を押したプレイヤーの向きで表示 */}
+            {renderCenterConditionSquare()}
+
             {/* 4つの座席（手前・右・奥・左） */}
             {LANDSCAPE_SEAT_CONFIG.map((seatCfg, physicalIndex) => {
               if (isSanma && !is43Mode && physicalIndex === 3) {
@@ -1294,27 +1419,15 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
                     </div>
                   </div>
                   <div
-                    className={`seat-score-row ls-score-mode-${disp.mode}`}
+                    className={`seat-score-row ls-score-mode-${disp.lsMode}`}
                     onClick={() => handleScoreBoxClick(pId)}
-                    title="1回タップで点差表示、もう1回タップで逆転条件を表示"
+                    title="1回タップで点差表示、もう1回タップで中央に逆転条件表を表示"
                   >
-                    {disp.mode === "cond" ? (
-                      <span className="seat-score-text ls-score-txt-cond">
-                        <span className="cond-badge-tsumo">
-                          ツモ {disp.tsumoLabel}
-                        </span>
-                        <span className="cond-badge-sep">｜</span>
-                        <span className="cond-badge-ron">
-                          直 {disp.directRonLabel}
-                        </span>
-                      </span>
-                    ) : (
-                      <span
-                        className={`seat-score-text ls-score-txt-${disp.mode}`}
-                      >
-                        {disp.text}
-                      </span>
-                    )}
+                    <span
+                      className={`seat-score-text ls-score-txt-${disp.lsMode}`}
+                    >
+                      {disp.diffText}
+                    </span>
                   </div>
                   <div
                     className={`riichi-stick ${isRiichi ? "" : "hidden"}`}

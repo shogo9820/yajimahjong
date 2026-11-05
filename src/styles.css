@@ -1339,15 +1339,17 @@ body,
 
   .riichi-stick {
     position: absolute;
-    top: -12px;
+    top: -16px;
     left: 50%;
     transform: translateX(-50%);
-    width: 64px;
-    height: 6px;
+    width: clamp(96px, 46%, 130px);
+    height: 10px;
     background-color: #f8fafc;
-    border: 1px solid #cbd5e1;
-    border-radius: 3px;
-    box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+    border: 1.5px solid #cbd5e1;
+    border-radius: 5px;
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.5),
+      0 0 8px rgba(255, 255, 255, 0.65);
     z-index: 10;
   }
   .riichi-stick::after {
@@ -1356,10 +1358,11 @@ body,
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 4px;
-    height: 4px;
+    width: 6px;
+    height: 6px;
     background-color: #ef4444;
     border-radius: 50%;
+    box-shadow: 0 0 3px rgba(239, 68, 68, 0.8);
   }
 
   .seat-header-row {

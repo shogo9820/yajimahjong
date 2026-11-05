@@ -22,6 +22,7 @@ import {
   StatsModal,
   TransferResultModal,
 } from "./components/Modals";
+import { calcHandPoints, formatHandShortLabel } from "./utils/scoreCalc";
 
 const DEFAULT_RULES: CustomRules = {
   gameMode: "4",
@@ -193,126 +194,6 @@ function loadStateFromStorage(): AppState {
     console.error("データ復元エラー。初期画面で起動します。", e);
     return base;
   }
-}
-
-function calcHandPoints(
-  isWinnerOya: boolean,
-  type: "ron" | "tsumo",
-  scale: ManganScale,
-  han: number,
-  fu: number,
-  tableSize: number,
-  sanmaTsumo: "tsumozon" | "marutori"
-): {
-  pointsWinnerGets: number;
-  pointsOyaPays: number;
-  pointsKoPays: number;
-} {
-  let pointsWinnerGets = 0;
-  let pointsOyaPays = 0;
-  let pointsKoPays = 0;
-
-  const isManganOrAbove =
-    scale !== null ||
-    (han === 3 && fu >= 60) ||
-    (han === 4 && fu >= 30) ||
-    han >= 5;
-
-  if (isManganOrAbove) {
-    const effScale = scale || "mangan";
-    if (effScale === "mangan") pointsWinnerGets = isWinnerOya ? 12000 : 8000;
-    else if (effScale === "hanman")
-      pointsWinnerGets = isWinnerOya ? 18000 : 12000;
-    else if (effScale === "baiman")
-      pointsWinnerGets = isWinnerOya ? 24000 : 16000;
-    else if (effScale === "sanbaiman")
-      pointsWinnerGets = isWinnerOya ? 36000 : 24000;
-    else if (effScale === "yakuman")
-      pointsWinnerGets = isWinnerOya ? 48000 : 32000;
-    else if (effScale === "double_yakuman")
-      pointsWinnerGets = isWinnerOya ? 96000 : 64000;
-
-    if (type === "tsumo") {
-      if (tableSize === 4) {
-        if (isWinnerOya) {
-          pointsKoPays = pointsWinnerGets / 3;
-        } else {
-          pointsOyaPays = pointsWinnerGets / 2;
-          pointsKoPays = pointsWinnerGets / 4;
-        }
-      } else {
-        // 3人麻雀
-        if (sanmaTsumo === "marutori") {
-          // ツモ損なし（北家分を折半・100点切り上げ）
-          if (isWinnerOya) {
-            pointsKoPays = Math.ceil(pointsWinnerGets / 2 / 100) * 100;
-            pointsWinnerGets = pointsKoPays * 2;
-          } else {
-            const baseOya = pointsWinnerGets / 2;
-            const baseKo = pointsWinnerGets / 4;
-            const northHalf = Math.ceil(baseKo / 2 / 100) * 100;
-            pointsOyaPays = baseOya + northHalf;
-            pointsKoPays = baseKo + northHalf;
-            pointsWinnerGets = pointsOyaPays + pointsKoPays;
-          }
-        } else {
-          // ツモ損あり
-          if (isWinnerOya) {
-            pointsKoPays = pointsWinnerGets / 3;
-            pointsWinnerGets = pointsKoPays * 2;
-          } else {
-            pointsOyaPays = pointsWinnerGets / 2;
-            pointsKoPays = pointsWinnerGets / 4;
-            pointsWinnerGets = pointsOyaPays + pointsKoPays;
-          }
-        }
-      }
-    }
-  } else {
-    const baseScore = fu * Math.pow(2, han + 2);
-    if (type === "ron") {
-      const rawScore = isWinnerOya ? baseScore * 6 : baseScore * 4;
-      pointsWinnerGets = Math.ceil(rawScore / 100) * 100;
-    } else {
-      const stdOyaPay = Math.ceil((baseScore * 4) / 100) * 100;
-      const stdKoPay = Math.ceil((baseScore * 2) / 100) * 100;
-      if (tableSize === 4) {
-        if (isWinnerOya) {
-          pointsKoPays = stdKoPay;
-          pointsWinnerGets = pointsKoPays * 3;
-        } else {
-          pointsOyaPays = stdOyaPay;
-          pointsKoPays = stdKoPay;
-          pointsWinnerGets = pointsOyaPays + pointsKoPays * 2;
-        }
-      } else {
-        // 3人麻雀
-        if (sanmaTsumo === "marutori") {
-          if (isWinnerOya) {
-            const total4P = stdKoPay * 3;
-            pointsKoPays = Math.ceil(total4P / 2 / 100) * 100;
-            pointsWinnerGets = pointsKoPays * 2;
-          } else {
-            const northHalf = Math.ceil(stdKoPay / 2 / 100) * 100;
-            pointsOyaPays = stdOyaPay + northHalf;
-            pointsKoPays = stdKoPay + northHalf;
-            pointsWinnerGets = pointsOyaPays + pointsKoPays;
-          }
-        } else {
-          if (isWinnerOya) {
-            pointsKoPays = stdKoPay;
-            pointsWinnerGets = pointsKoPays * 2;
-          } else {
-            pointsOyaPays = stdOyaPay;
-            pointsKoPays = stdKoPay;
-            pointsWinnerGets = pointsOyaPays + pointsKoPays;
-          }
-        }
-      }
-    }
-  }
-
-  return { pointsWinnerGets, pointsOyaPays, pointsKoPays };
 }
 
 export const App: React.FC = () => {
@@ -1209,33 +1090,44 @@ export const App: React.FC = () => {
         return distA - distB;
       });
 
-      const scaleNames: Record<string, string> = {
-        mangan: "満貫",
-        hanman: "跳満",
-        baiman: "倍満",
-        sanbaiman: "三倍満",
-        yakuman: "役満",
-        double_yakuman: "W役満",
+      const getWinnerHandCfg = (wId: number) => {
+        if (matchCalc.winnerConfigs && matchCalc.winnerConfigs[wId]) {
+          return matchCalc.winnerConfigs[wId];
+        }
+        return {
+          fu: matchCalc.fu,
+          han: matchCalc.han,
+          scale: matchCalc.scale,
+        };
       };
-      const handLabel = matchCalc.scale
-        ? scaleNames[matchCalc.scale]
-        : `${matchCalc.han}翻 ${matchCalc.fu}符`;
+
+      const handSummaries = sortedWinners.map((wId) => {
+        const cfg = getWinnerHandCfg(wId);
+        return sortedWinners.length >= 2
+          ? `${getPlayerName(wId)}:${formatHandShortLabel(
+              cfg.scale,
+              cfg.han,
+              cfg.fu
+            )}`
+          : formatHandShortLabel(cfg.scale, cfg.han, cfg.fu);
+      });
 
       modalSubtitle =
         sortedWinners.length >= 2
-          ? `ダブロン和了（${sortedWinners.length}名 / ${handLabel}）`
-          : `ロン和了（${handLabel}）`;
+          ? `ダブロン和了（${handSummaries.join(" / ")}）`
+          : `ロン和了（${handSummaries[0]}）`;
 
       let totalLoserPays = 0;
 
       sortedWinners.forEach((wId, idx) => {
         const isWinnerOya = wId === currentOyaId;
+        const cfg = getWinnerHandCfg(wId);
         const { pointsWinnerGets } = calcHandPoints(
           isWinnerOya,
           "ron",
-          matchCalc.scale,
-          matchCalc.han,
-          matchCalc.fu,
+          cfg.scale,
+          cfg.han,
+          cfg.fu,
           tableSize,
           appState.rules.sanmaTsumo
         );

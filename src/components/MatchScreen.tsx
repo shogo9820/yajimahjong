@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   AgariType,
   CustomRules,
@@ -6,7 +6,9 @@ import {
   ManganScale,
   MatchCalcState,
   WIND_LABELS,
+  WinnerHandConfig,
 } from "../types";
+import { calcHandPoints, formatHandShortLabel } from "../utils/scoreCalc";
 
 interface MatchScreenProps {
   activePlayers: number[];
@@ -82,13 +84,154 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
   } | null>(null);
   const touchMovedRef = useRef(false);
 
+  // 🎯 点数タップ時の「3秒間 他プレイヤーとの点差表示」用State
+  const [diffBasePlayerId, setDiffBasePlayerId] = useState<number | null>(null);
+  const diffTimerRef = useRef<number | null>(null);
+
+  // 🎯 ダブロン時にどの和了者の手役（符・翻・満貫）を編集しているか
+  const [editingWinnerId, setEditingWinnerId] = useState<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (diffTimerRef.current !== null) {
+        window.clearTimeout(diffTimerRef.current);
+      }
+    };
+  }, []);
+
+  // 和了者リストが変わった際、ダブロン編集対象IDを自動調整
+  useEffect(() => {
+    if (matchCalc.winners.length === 0) {
+      setEditingWinnerId(null);
+    } else if (
+      editingWinnerId === null ||
+      !matchCalc.winners.includes(editingWinnerId)
+    ) {
+      setEditingWinnerId(matchCalc.winners[matchCalc.winners.length - 1]);
+    }
+  }, [matchCalc.winners, editingWinnerId]);
+
   const oyaWind = WIND_LABELS[currentWind] || "東";
   const roundStr = `${oyaWind}${currentKyoku}局`;
   const oyaIndex = (currentKyoku - 1) % tableSize;
+  const currentOyaId = activePlayers[oyaIndex];
   const isSanma = tableSize === 3;
   const is43Mode = rules.gameMode === "4-3打ち";
 
   const startPoints = parseInt(rules.points.split("-")[0], 10) || 25000;
+
+  // プレイヤーごとの手役設定を取得するヘルパー
+  const getWinnerConfig = (pId: number): WinnerHandConfig => {
+    if (matchCalc.winnerConfigs && matchCalc.winnerConfigs[pId]) {
+      return matchCalc.winnerConfigs[pId];
+    }
+    return {
+      fu: matchCalc.fu,
+      han: matchCalc.han,
+      scale: matchCalc.scale,
+    };
+  };
+
+  // 現在操作中の手役設定（シングル和了時は共通設定、ダブロン時は選択中の和了者設定）
+  const activeHandConfig: WinnerHandConfig =
+    matchCalc.type === "ron" &&
+    matchCalc.winners.length >= 2 &&
+    editingWinnerId !== null
+      ? getWinnerConfig(editingWinnerId)
+      : {
+          fu: matchCalc.fu,
+          han: matchCalc.han,
+          scale: matchCalc.scale,
+        };
+
+  const updateActiveHandConfig = (partial: Partial<WinnerHandConfig>) => {
+    if (
+      matchCalc.type === "ron" &&
+      matchCalc.winners.length >= 2 &&
+      editingWinnerId !== null
+    ) {
+      const prevCfg = getWinnerConfig(editingWinnerId);
+      const nextCfg = { ...prevCfg, ...partial };
+      const nextMap = {
+        ...(matchCalc.winnerConfigs || {}),
+        [editingWinnerId]: nextCfg,
+      };
+      // 1人目の場合は基本fu/han/scaleも同期しておく
+      if (editingWinnerId === matchCalc.winners[0]) {
+        onUpdateMatchCalc({
+          ...partial,
+          winnerConfigs: nextMap,
+        });
+      } else {
+        onUpdateMatchCalc({
+          winnerConfigs: nextMap,
+        });
+      }
+    } else {
+      const nextMap = { ...(matchCalc.winnerConfigs || {}) };
+      if (matchCalc.winners.length === 1) {
+        const wId = matchCalc.winners[0];
+        nextMap[wId] = { ...getWinnerConfig(wId), ...partial };
+      }
+      onUpdateMatchCalc({
+        ...partial,
+        winnerConfigs: nextMap,
+      });
+    }
+  };
+
+  // 点数を押した時に3秒間だけ他プレイヤーとの点差を表示する
+  const handleScoreBoxClick = (playerId: number) => {
+    if (diffTimerRef.current !== null) {
+      window.clearTimeout(diffTimerRef.current);
+    }
+    setDiffBasePlayerId(playerId);
+    diffTimerRef.current = window.setTimeout(() => {
+      setDiffBasePlayerId(null);
+      diffTimerRef.current = null;
+    }, 3000);
+  };
+
+  const handleScoreManualEditPrompt = (
+    e: React.MouseEvent,
+    playerId: number,
+    currentScore: number
+  ) => {
+    e.stopPropagation();
+    const input = window.prompt(
+      `${getPlayerName(playerId)} の持ち点を直接修正:`,
+      String(currentScore)
+    );
+    if (input !== null) {
+      const parsed = parseInt(input, 10);
+      if (!Number.isNaN(parsed)) {
+        onManualScoreChange(playerId, parsed);
+      }
+    }
+  };
+
+  // 点数または点差の表示文字列・クラスを算出
+  const getScoreDisplayInfo = (playerId: number, rawScore: number) => {
+    if (diffBasePlayerId === null) {
+      return {
+        text: rawScore.toLocaleString(),
+        mode: "normal" as const,
+      };
+    }
+    if (playerId === diffBasePlayerId) {
+      return {
+        text: `基準 ${rawScore.toLocaleString()}`,
+        mode: "base" as const,
+      };
+    }
+    const baseScore = currentPoints[diffBasePlayerId] ?? startPoints;
+    const diff = rawScore - baseScore;
+    const sign = diff > 0 ? "+" : diff < 0 ? "" : "±";
+    return {
+      text: `${sign}${diff.toLocaleString()}`,
+      mode: diff > 0 ? ("plus" as const) : diff < 0 ? ("minus" as const) : ("zero" as const),
+    };
+  };
 
   const assignToRole = (
     playerId: number,
@@ -108,7 +251,6 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
           onUpdateMatchCalc({ winners: [...matchCalc.winners, playerId] });
         }
       } else if (matchCalc.type === "ron") {
-        // ダブロン対応：最大2名（または3名）まで和了者枠に追加可能
         const exists = matchCalc.winners.includes(playerId);
         if (exists) {
           if (toggleIfExist) {
@@ -119,15 +261,32 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
         } else {
           const maxWinners = Math.max(1, tableSize - 1);
           const filtered = matchCalc.winners.slice(0, maxWinners - 1);
+          const nextWinners = [...filtered, playerId];
           const nextLoser =
             matchCalc.loser === playerId ? null : matchCalc.loser;
+          const nextConfigs = { ...(matchCalc.winnerConfigs || {}) };
+          if (filtered.length >= 1 && !nextConfigs[filtered[0]]) {
+            nextConfigs[filtered[0]] = {
+              fu: matchCalc.fu,
+              han: matchCalc.han,
+              scale: matchCalc.scale,
+            };
+          }
+          if (!nextConfigs[playerId]) {
+            nextConfigs[playerId] = {
+              fu: matchCalc.fu,
+              han: matchCalc.han,
+              scale: matchCalc.scale,
+            };
+          }
+          setEditingWinnerId(playerId);
           onUpdateMatchCalc({
-            winners: [...filtered, playerId],
+            winners: nextWinners,
             loser: nextLoser,
+            winnerConfigs: nextConfigs,
           });
         }
       } else {
-        // ツモ または 特殊（チョンボ対象者）は1名のみ
         onUpdateMatchCalc({ winners: [playerId] });
       }
     } else {
@@ -137,7 +296,6 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
     }
   };
 
-  // タップでも直感的にセット可能にする補助機能
   const handlePlayerChipTap = (playerId: number) => {
     if (touchMovedRef.current) return;
     if (matchCalc.type === "tenpai") {
@@ -145,8 +303,6 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
     } else if (matchCalc.type === "tsumo" || matchCalc.type === "special") {
       assignToRole(playerId, "winner", true);
     } else {
-      // ロンの場合：
-      // 1人目タップ➔和了者、2人目タップ➔放銃者、3人目タップ➔2人目の和了者（ダブロン）
       if (matchCalc.winners.includes(playerId)) {
         onUpdateMatchCalc({
           winners: matchCalc.winners.filter((id) => id !== playerId),
@@ -154,11 +310,10 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
       } else if (matchCalc.loser === playerId) {
         onUpdateMatchCalc({ loser: null });
       } else if (matchCalc.winners.length === 0) {
-        onUpdateMatchCalc({ winners: [playerId] });
+        assignToRole(playerId, "winner");
       } else if (matchCalc.loser === null) {
         onUpdateMatchCalc({ loser: playerId });
       } else {
-        // すでに和了者と放銃者がいる状態で別プレイヤーをタップしたらダブロン追加
         assignToRole(playerId, "winner");
       }
     }
@@ -170,26 +325,14 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
       winners: type === "tenpai" ? [...riichiPlayers] : [],
       loser: null,
       scale: null,
+      winnerConfigs: {},
     });
   };
 
   const handleToggleScale = (scale: Exclude<ManganScale, null>) => {
-    onUpdateMatchCalc({
-      scale: matchCalc.scale === scale ? null : scale,
+    updateActiveHandConfig({
+      scale: activeHandConfig.scale === scale ? null : scale,
     });
-  };
-
-  const handleLandscapeScorePrompt = (playerId: number, currentScore: number) => {
-    const input = window.prompt(
-      `${getPlayerName(playerId)} の持ち点を直接修正:`,
-      String(currentScore)
-    );
-    if (input !== null) {
-      const parsed = parseInt(input, 10);
-      if (!Number.isNaN(parsed)) {
-        onManualScoreChange(playerId, parsed);
-      }
-    }
   };
 
   // Touch Drag & Drop
@@ -274,6 +417,127 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
       ? "❌ （不使用）"
       : "🎯 放銃者 (ロンの場合)";
 
+  // ⚡ リアルタイム点数プレビュー文字列を生成
+  const getExecutePreviewText = (): string => {
+    if (isTenpai) {
+      const tenpaiCount = matchCalc.winners.length;
+      const noTenCount = tableSize - tenpaiCount;
+      const totalPool =
+        tableSize === 3 && rules.sanmaNoten === "2000" ? 2000 : 3000;
+      if (tenpaiCount === 0 || noTenCount === 0) {
+        return `⚡ 流局精算（全員${tenpaiCount === 0 ? "不聴" : "聴牌"} ±0点）`;
+      }
+      const plus = totalPool / tenpaiCount;
+      const minus = totalPool / noTenCount;
+      return `⚡ 流局精算（+${plus.toLocaleString()} / -${minus.toLocaleString()}）`;
+    }
+
+    if (matchCalc.type === "ron") {
+      const honbaAdd = honbaCount * 300;
+      const kyotakuAdd = kyotakuCount * 1000;
+      if (matchCalc.winners.length === 0) {
+        const koPt = calcHandPoints(
+          false,
+          "ron",
+          matchCalc.scale,
+          matchCalc.han,
+          matchCalc.fu,
+          tableSize,
+          rules.sanmaTsumo
+        ).pointsWinnerGets;
+        const oyaPt = calcHandPoints(
+          true,
+          "ron",
+          matchCalc.scale,
+          matchCalc.han,
+          matchCalc.fu,
+          tableSize,
+          rules.sanmaTsumo
+        ).pointsWinnerGets;
+        return `⚡ ロン精算（子:${koPt.toLocaleString()} / 親:${oyaPt.toLocaleString()}）`;
+      }
+      if (matchCalc.winners.length === 1) {
+        const wId = matchCalc.winners[0];
+        const isOya = wId === currentOyaId;
+        const cfg = getWinnerConfig(wId);
+        const basePt = calcHandPoints(
+          isOya,
+          "ron",
+          cfg.scale,
+          cfg.han,
+          cfg.fu,
+          tableSize,
+          rules.sanmaTsumo
+        ).pointsWinnerGets;
+        const total = basePt + honbaAdd + kyotakuAdd;
+        const extra =
+          honbaAdd + kyotakuAdd > 0 ? ` ➔ 計+${total.toLocaleString()}` : "";
+        return `⚡ 点数移動（${
+          isOya ? "親" : "子"
+        }ロン ${basePt.toLocaleString()}点${extra}）`;
+      }
+      // ダブロン時
+      const parts = matchCalc.winners.map((wId) => {
+        const isOya = wId === currentOyaId;
+        const cfg = getWinnerConfig(wId);
+        const pt = calcHandPoints(
+          isOya,
+          "ron",
+          cfg.scale,
+          cfg.han,
+          cfg.fu,
+          tableSize,
+          rules.sanmaTsumo
+        ).pointsWinnerGets;
+        return `${getPlayerName(wId)}:${pt.toLocaleString()}`;
+      });
+      return `⚡ ダブロン移動（${parts.join(" / ")}）`;
+    }
+
+    // ツモ時
+    const honbaTsumo = honbaCount * 100;
+    const kyotakuAdd = kyotakuCount * 1000;
+    if (matchCalc.winners.length === 0) {
+      const koRes = calcHandPoints(
+        false,
+        "tsumo",
+        matchCalc.scale,
+        matchCalc.han,
+        matchCalc.fu,
+        tableSize,
+        rules.sanmaTsumo
+      );
+      const oyaRes = calcHandPoints(
+        true,
+        "tsumo",
+        matchCalc.scale,
+        matchCalc.han,
+        matchCalc.fu,
+        tableSize,
+        rules.sanmaTsumo
+      );
+      return `⚡ ツモ精算（子:${koRes.pointsKoPays.toLocaleString()}/${koRes.pointsOyaPays.toLocaleString()} 親:${oyaRes.pointsKoPays.toLocaleString()}オール）`;
+    }
+
+    const wId = matchCalc.winners[0];
+    const isOya = wId === currentOyaId;
+    const res = calcHandPoints(
+      isOya,
+      "tsumo",
+      matchCalc.scale,
+      matchCalc.han,
+      matchCalc.fu,
+      tableSize,
+      rules.sanmaTsumo
+    );
+    const total =
+      res.pointsWinnerGets + honbaTsumo * (tableSize - 1) + kyotakuAdd;
+    if (isOya) {
+      return `⚡ 点数移動（親ツモ ${res.pointsKoPays.toLocaleString()}オール / 計+${total.toLocaleString()}）`;
+    }
+    return `⚡ 点数移動（子ツモ ${res.pointsKoPays.toLocaleString()}/${res.pointsOyaPays.toLocaleString()} / 計+${total.toLocaleString()}）`;
+  };
+
   const renderRoleSlotContent = (
     role: "winner" | "loser",
     placeholder: string
@@ -316,13 +580,41 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
     }
   };
 
+  // ダブロン時の和了者別手役切り替えタブ
+  const renderDoubleRonTabs = (isLandscape: boolean) => {
+    if (!isDoubleRon) return null;
+    return (
+      <div
+        className={`double-ron-tabs ${
+          isLandscape ? "ls-double-ron-tabs" : "mb-2"
+        }`}
+      >
+        {matchCalc.winners.map((wId, idx) => {
+          const cfg = getWinnerConfig(wId);
+          const isEditing = editingWinnerId === wId;
+          return (
+            <button
+              key={wId}
+              type="button"
+              onClick={() => setEditingWinnerId(wId)}
+              className={`btn-dron-tab ${isEditing ? "active" : ""}`}
+            >
+              {idx + 1}. {getPlayerName(wId)} (
+              {formatHandShortLabel(cfg.scale, cfg.han, cfg.fu)})
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
+
   const renderScaleButtons = (isLandscape: boolean) => (
     <div className={`scale-buttons-grid ${isLandscape ? "ls-scale-grid" : ""}`}>
       <button
         type="button"
         className={`btn-scale btn-scale-lg ${
           isLandscape ? "ls-btn-scale" : ""
-        } ${matchCalc.scale === "mangan" ? "active" : ""}`}
+        } ${activeHandConfig.scale === "mangan" ? "active" : ""}`}
         onClick={() => handleToggleScale("mangan")}
       >
         満貫
@@ -331,7 +623,7 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
         type="button"
         className={`btn-scale btn-scale-lg ${
           isLandscape ? "ls-btn-scale" : ""
-        } ${matchCalc.scale === "hanman" ? "active" : ""}`}
+        } ${activeHandConfig.scale === "hanman" ? "active" : ""}`}
         onClick={() => handleToggleScale("hanman")}
       >
         跳満
@@ -340,7 +632,7 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
         type="button"
         className={`btn-scale btn-scale-lg ${
           isLandscape ? "ls-btn-scale" : ""
-        } ${matchCalc.scale === "baiman" ? "active" : ""}`}
+        } ${activeHandConfig.scale === "baiman" ? "active" : ""}`}
         onClick={() => handleToggleScale("baiman")}
       >
         倍満
@@ -349,7 +641,7 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
         type="button"
         className={`btn-scale btn-scale-sm3 ${
           isLandscape ? "ls-btn-scale-sm" : ""
-        } ${matchCalc.scale === "sanbaiman" ? "active" : ""}`}
+        } ${activeHandConfig.scale === "sanbaiman" ? "active" : ""}`}
         onClick={() => handleToggleScale("sanbaiman")}
       >
         3倍満
@@ -358,7 +650,7 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
         type="button"
         className={`btn-scale btn-scale-sm3 ${
           isLandscape ? "ls-btn-scale-sm" : ""
-        } ${matchCalc.scale === "yakuman" ? "active" : ""}`}
+        } ${activeHandConfig.scale === "yakuman" ? "active" : ""}`}
         onClick={() => handleToggleScale("yakuman")}
       >
         役満
@@ -367,7 +659,7 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
         type="button"
         className={`btn-scale btn-scale-sm3 ${
           isLandscape ? "ls-btn-scale-sm" : ""
-        } ${matchCalc.scale === "double_yakuman" ? "active" : ""}`}
+        } ${activeHandConfig.scale === "double_yakuman" ? "active" : ""}`}
         onClick={() => handleToggleScale("double_yakuman")}
       >
         W役満
@@ -402,6 +694,8 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
       </button>
     </div>
   );
+
+  const previewBtnText = getExecutePreviewText();
 
   return (
     <div id="screen-match" className="screen">
@@ -488,7 +782,7 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
                 fontSize: "11px",
               }}
             >
-              現在の持ち点（立直は再タップで取消可 / 名前をドロップまたはタップ）
+              現在の持ち点（点数タップで3秒間点差表示 / ✎で手入力修正）
             </div>
             <div id="match-players-list" className="table-rows">
               {activePlayers.slice(0, tableSize).map((pId, idx) => {
@@ -500,6 +794,7 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
                   currentPoints[pId] !== undefined
                     ? currentPoints[pId]
                     : startPoints;
+                const disp = getScoreDisplayInfo(pId, score);
 
                 return (
                   <div
@@ -537,19 +832,28 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
                         {getPlayerName(pId)}
                       </div>
                     </div>
-                    <input
-                      type="number"
-                      id={`match-pt-${pId}`}
-                      value={score}
-                      step={100}
-                      className="input-score"
-                      onChange={(e) =>
-                        onManualScoreChange(
-                          pId,
-                          parseInt(e.target.value, 10) || 0
-                        )
-                      }
-                    />
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        id={`match-pt-${pId}`}
+                        onClick={() => handleScoreBoxClick(pId)}
+                        className={`score-diff-btn score-mode-${disp.mode}`}
+                        title="タップして3秒間このプレイヤー基準の点差を表示"
+                      >
+                        {disp.text}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) =>
+                          handleScoreManualEditPrompt(e, pId, score)
+                        }
+                        className="btn-score-edit-mini"
+                        title="点数を手入力で修正"
+                      >
+                        ✎
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -701,14 +1005,17 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
               <>
                 {!isTenpai && (
                   <>
+                    {renderDoubleRonTabs(false)}
                     <div id="panel-detail-box" className="flex gap-2 mb-2">
                       <div className="flex-1">
                         <select
                           id="select-fu"
                           className="inline-select-sm"
-                          value={matchCalc.fu}
+                          value={activeHandConfig.fu}
                           onChange={(e) =>
-                            onUpdateMatchCalc({ fu: Number(e.target.value) })
+                            updateActiveHandConfig({
+                              fu: Number(e.target.value),
+                            })
                           }
                         >
                           <option value={20}>20符（ピンフツモなど）</option>
@@ -725,9 +1032,11 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
                         <select
                           id="select-han"
                           className="inline-select-sm"
-                          value={matchCalc.han}
+                          value={activeHandConfig.han}
                           onChange={(e) =>
-                            onUpdateMatchCalc({ han: Number(e.target.value) })
+                            updateActiveHandConfig({
+                              han: Number(e.target.value),
+                            })
                           }
                         >
                           <option value={1}>1翻</option>
@@ -750,7 +1059,7 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
                   onClick={onExecutePointTransfer}
                   className="btn-execute mt-2"
                 >
-                  ⚡ 計算して点数を移動する
+                  {previewBtnText}
                 </button>
               </>
             )}
@@ -840,6 +1149,7 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
                 currentPoints[pId] !== undefined
                   ? currentPoints[pId]
                   : startPoints;
+              const disp = getScoreDisplayInfo(pId, pScore);
 
               return (
                 <div
@@ -882,12 +1192,14 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
                     </div>
                   </div>
                   <div
-                    className="seat-score-row"
-                    onClick={() => handleLandscapeScorePrompt(pId, pScore)}
-                    title="タップして点数を直接修正"
+                    className={`seat-score-row ls-score-mode-${disp.mode}`}
+                    onClick={() => handleScoreBoxClick(pId)}
+                    title="タップして3秒間このプレイヤーとの点差を表示"
                   >
-                    <span className="seat-score-text">
-                      {pScore.toLocaleString()}
+                    <span
+                      className={`seat-score-text ls-score-txt-${disp.mode}`}
+                    >
+                      {disp.text}
                     </span>
                   </div>
                   <div
@@ -1111,6 +1423,7 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
               <>
                 {!isTenpai && (
                   <>
+                    {renderDoubleRonTabs(true)}
                     <div
                       id="ls-panel-detail-box"
                       className="flex gap-1 ls-detail-row"
@@ -1119,9 +1432,11 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
                         <select
                           id="ls-select-fu"
                           className="inline-select-sm ls-select-sm"
-                          value={matchCalc.fu}
+                          value={activeHandConfig.fu}
                           onChange={(e) =>
-                            onUpdateMatchCalc({ fu: Number(e.target.value) })
+                            updateActiveHandConfig({
+                              fu: Number(e.target.value),
+                            })
                           }
                         >
                           <option value={20}>20符</option>
@@ -1138,9 +1453,11 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
                         <select
                           id="ls-select-han"
                           className="inline-select-sm ls-select-sm"
-                          value={matchCalc.han}
+                          value={activeHandConfig.han}
                           onChange={(e) =>
-                            onUpdateMatchCalc({ han: Number(e.target.value) })
+                            updateActiveHandConfig({
+                              han: Number(e.target.value),
+                            })
                           }
                         >
                           <option value={1}>1翻</option>
@@ -1162,7 +1479,7 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
                   onClick={onExecutePointTransfer}
                   className="btn-execute ls-btn-execute"
                 >
-                  ⚡ 計算して点数を移動する
+                  {previewBtnText}
                 </button>
               </>
             )}

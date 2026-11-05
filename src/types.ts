@@ -133,7 +133,7 @@ export interface MatchCalcState {
   scale: ManganScale;
   fu: number;
   han: number;
-  secondWinnerConfig?: WinnerHandConfig;
+  winnerConfigs?: Record<number, WinnerHandConfig>;
 }
 
 export interface TransferDiffItem {

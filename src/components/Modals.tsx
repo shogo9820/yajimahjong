@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { MatchLog, Room, TransferModalData } from "../types";
 
 interface StatsModalProps {
@@ -16,11 +16,13 @@ export const StatsModal: React.FC<StatsModalProps> = ({
   onUndoLastMatchStats,
   onClose,
 }) => {
+  const [activeTab, setActiveTab] = useState<"ranking" | "sheet">("ranking");
+
   if (!isOpen) return null;
 
   const playersObj = room?.players || {};
-  const hasHistory =
-    Array.isArray(room?.matchHistory) && room!.matchHistory!.length > 0;
+  const matchHistory = room?.matchHistory || [];
+  const hasHistory = matchHistory.length > 0;
 
   const sortedStats = Object.keys(playersObj)
     .map((pId) => {
@@ -52,46 +54,153 @@ export const StatsModal: React.FC<StatsModalProps> = ({
           <p className="subtitle">
             現在のルーム: {roomName}（通算 {room?.gameCount || 0} 半荘）
           </p>
+          <div className="stats-tab-bar mt-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab("ranking")}
+              className={`btn-stats-tab ${
+                activeTab === "ranking" ? "active" : ""
+              }`}
+            >
+              📊 通算ランキング
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("sheet")}
+              className={`btn-stats-tab ${
+                activeTab === "sheet" ? "active" : ""
+              }`}
+            >
+              📝 各半荘スコアシート ({matchHistory.length})
+            </button>
+          </div>
         </div>
 
         <div className="modal-scroll-area">
-          <table className="result-table stats-detail-table">
-            <thead>
-              <tr>
-                <th>プレイヤー</th>
-                <th className="text-center">対局</th>
-                <th className="text-center">平均着順</th>
-                <th className="text-center">着順内訳(1-2-3-4)</th>
-                <th className="text-right">トータルpt</th>
-              </tr>
-            </thead>
-            <tbody id="stats-table-body">
-              {sortedStats.map((item, idx) => {
-                const ptClass = item.pt >= 0 ? "pt-plus" : "pt-minus";
-                const ptSign = item.pt > 0 ? "+" : "";
-                return (
-                  <tr key={item.id}>
-                    <td>
-                      <span className="stats-rank-num">{idx + 1}.</span>{" "}
-                      <strong>{item.name}</strong>
-                    </td>
-                    <td className="text-center font-mono">{item.games}</td>
-                    <td className="text-center font-mono">{item.avgRank}</td>
-                    <td
-                      className="text-center font-mono"
-                      style={{ fontSize: "12px", color: "#94a3b8" }}
-                    >
-                      {item.rankCounts.join("-")}
-                    </td>
-                    <td className={`text-right font-mono ${ptClass}`}>
-                      {ptSign}
-                      {item.pt.toFixed(1)}
-                    </td>
+          {activeTab === "ranking" ? (
+            <table className="result-table stats-detail-table">
+              <thead>
+                <tr>
+                  <th>プレイヤー</th>
+                  <th className="text-center">対局</th>
+                  <th className="text-center">平均着順</th>
+                  <th className="text-center">着順内訳(1-2-3-4)</th>
+                  <th className="text-right">トータルpt</th>
+                </tr>
+              </thead>
+              <tbody id="stats-table-body">
+                {sortedStats.map((item, idx) => {
+                  const ptClass = item.pt >= 0 ? "pt-plus" : "pt-minus";
+                  const ptSign = item.pt > 0 ? "+" : "";
+                  return (
+                    <tr key={item.id}>
+                      <td>
+                        <span className="stats-rank-num">{idx + 1}.</span>{" "}
+                        <strong>{item.name}</strong>
+                      </td>
+                      <td className="text-center font-mono">{item.games}</td>
+                      <td className="text-center font-mono">{item.avgRank}</td>
+                      <td
+                        className="text-center font-mono"
+                        style={{ fontSize: "12px", color: "#94a3b8" }}
+                      >
+                        {item.rankCounts.join("-")}
+                      </td>
+                      <td className={`text-right font-mono ${ptClass}`}>
+                        {ptSign}
+                        {item.pt.toFixed(1)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : !hasHistory ? (
+            <div
+              style={{
+                color: "#64748b",
+                textAlign: "center",
+                paddingTop: "40px",
+                fontSize: "14px",
+              }}
+            >
+              まだ完了した半荘の履歴シートはありません。
+            </div>
+          ) : (
+            <div className="score-sheet-wrapper">
+              <table className="result-table stats-detail-table score-sheet-table">
+                <thead>
+                  <tr>
+                    <th>半荘</th>
+                    {sortedStats.map((p) => (
+                      <th key={p.id} className="text-right">
+                        {p.name}
+                      </th>
+                    ))}
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                </thead>
+                <tbody>
+                  {matchHistory.map((entry, idx) => (
+                    <tr key={entry.id || idx}>
+                      <td className="font-mono" style={{ color: "#94a3b8" }}>
+                        <strong>第{idx + 1}戦</strong>
+                      </td>
+                      {sortedStats.map((p) => {
+                        const found = entry.results.find(
+                          (r) => r.playerId === p.id
+                        );
+                        if (!found) {
+                          return (
+                            <td
+                              key={p.id}
+                              className="text-right font-mono"
+                              style={{ color: "#475569" }}
+                            >
+                              -
+                            </td>
+                          );
+                        }
+                        const ptClass =
+                          found.pt >= 0 ? "pt-plus" : "pt-minus";
+                        const ptSign = found.pt > 0 ? "+" : "";
+                        return (
+                          <td
+                            key={p.id}
+                            className={`text-right font-mono ${ptClass}`}
+                          >
+                            <span className="sheet-rank-badge">
+                              {found.rank}着
+                            </span>{" "}
+                            {ptSign}
+                            {found.pt.toFixed(1)}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                  {/* 合計行 */}
+                  <tr className="score-sheet-total-row">
+                    <td>
+                      <strong>合計</strong>
+                    </td>
+                    {sortedStats.map((p) => {
+                      const ptClass = p.pt >= 0 ? "pt-plus" : "pt-minus";
+                      const ptSign = p.pt > 0 ? "+" : "";
+                      return (
+                        <td
+                          key={p.id}
+                          className={`text-right font-mono ${ptClass}`}
+                        >
+                          {ptSign}
+                          {p.pt.toFixed(1)}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         <div className="modal-bottom-footer flex gap-2">

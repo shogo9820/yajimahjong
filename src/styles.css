@@ -1732,4 +1732,154 @@ body,
   font-size: 12px !important;
 }
 
+/* ==========================================================================
+   3秒間点差表示・ダブロン個別設定タブ・半荘スコアシート用スタイル
+   ========================================================================== */
+.score-diff-btn {
+  min-width: 100px;
+  background-color: #0f172a;
+  border: 1.5px solid #64748b;
+  text-align: right;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 800;
+  font-size: 16px;
+  color: #34d399;
+  border-radius: 8px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.score-diff-btn.score-mode-base {
+  border-color: #fbbf24;
+  background-color: rgba(251, 191, 36, 0.14);
+  color: #fbbf24;
+  font-size: 14px;
+}
+.score-diff-btn.score-mode-plus {
+  border-color: #38bdf8;
+  background-color: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+}
+.score-diff-btn.score-mode-minus {
+  border-color: #f43f5e;
+  background-color: rgba(244, 63, 94, 0.12);
+  color: #f43f5e;
+}
+.score-diff-btn.score-mode-zero {
+  border-color: #94a3b8;
+  color: #cbd5e1;
+}
+
+.btn-score-edit-mini {
+  background-color: #1e293b;
+  border: 1px solid #475569;
+  color: #94a3b8;
+  border-radius: 6px;
+  padding: 5px 7px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* 横持ち時の点差表示ハイライト */
+.seat-score-row {
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.ls-score-mode-base {
+  border-color: #fbbf24 !important;
+  background-color: rgba(251, 191, 36, 0.16) !important;
+}
+.ls-score-txt-base {
+  color: #fbbf24 !important;
+  font-size: clamp(16px, 5cqh, 22px) !important;
+}
+.ls-score-txt-plus {
+  color: #38bdf8 !important;
+}
+.ls-score-txt-minus {
+  color: #f43f5e !important;
+}
+.ls-score-txt-zero {
+  color: #cbd5e1 !important;
+}
+
+/* ダブロン時の和了者別手役切り替えタブ */
+.double-ron-tabs {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+.ls-double-ron-tabs {
+  gap: 4px;
+}
+.btn-dron-tab {
+  flex: 1;
+  background-color: #1e293b;
+  border: 1.5px solid #475569;
+  color: #94a3b8;
+  border-radius: 8px;
+  padding: 5px 6px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ls-double-ron-tabs .btn-dron-tab {
+  padding: 3px 4px;
+  font-size: 10px;
+}
+.btn-dron-tab.active {
+  background-color: rgba(16, 185, 129, 0.18);
+  border-color: #34d399;
+  color: #34d399;
+}
+
+/* 総合成績表モーダルのタブ＆各半荘スコアシート */
+.stats-tab-bar {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+.btn-stats-tab {
+  flex: 1;
+  max-width: 220px;
+  background-color: #1e293b;
+  border: 1px solid #475569;
+  color: #94a3b8;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.btn-stats-tab.active {
+  background-color: #0ea5e9;
+  border-color: #38bdf8;
+  color: #082f49;
+}
+
+.score-sheet-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+.score-sheet-table th,
+.score-sheet-table td {
+  white-space: nowrap;
+}
+.sheet-rank-badge {
+  font-size: 10px;
+  color: #94a3b8;
+  background-color: rgba(51, 65, 85, 0.5);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+.score-sheet-total-row td {
+  border-top: 2px solid #475569 !important;
+  background-color: rgba(30, 41, 59, 0.7);
+  font-weight: 900;
+}
+
+
 

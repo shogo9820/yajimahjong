@@ -134,3 +134,172 @@ export function calcHandPoints(
   return { pointsWinnerGets, pointsOyaPays, pointsKoPays };
 }
 
+export interface ComebackConditionResult {
+  isAhead: boolean;
+  tsumoLabel: string;
+  directRonLabel: string;
+}
+
+const TSUMO_CANDIDATES: { fu: number; han: number; scale: ManganScale }[] = [
+  { fu: 30, han: 1, scale: null }, // 子:300/500, 親:500オール
+  { fu: 20, han: 2, scale: null }, // 子:400/700, 親:700オール (ピンフツモ / 40符1翻)
+  { fu: 30, han: 2, scale: null }, // 子:500/1000, 親:1000オール
+  { fu: 40, han: 2, scale: null }, // 子:700/1300, 親:1300オール (20符3翻ピンフツモ含む)
+  { fu: 25, han: 3, scale: null }, // 子:800/1600, 親:1600オール (七対子ツモ / 50符2翻)
+  { fu: 30, han: 3, scale: null }, // 子:1000/2000, 親:2000オール
+  { fu: 40, han: 3, scale: null }, // 子:1300/2600, 親:2600オール (20符4翻ピンフツモ含む)
+  { fu: 25, han: 4, scale: null }, // 子:1600/3200, 親:3200オール (七対子4翻 / 50符3翻)
+  { fu: 30, han: 5, scale: "mangan" },
+  { fu: 30, han: 6, scale: "hanman" },
+  { fu: 30, han: 8, scale: "baiman" },
+  { fu: 30, han: 11, scale: "sanbaiman" },
+  { fu: 30, han: 13, scale: "yakuman" },
+  { fu: 30, han: 26, scale: "double_yakuman" },
+];
+
+const RON_CANDIDATES: { fu: number; han: number; scale: ManganScale }[] = [
+  { fu: 30, han: 1, scale: null }, // 子:1000, 親:1500
+  { fu: 40, han: 1, scale: null }, // 子:1300, 親:2000
+  { fu: 25, han: 2, scale: null }, // 子:1600, 親:2400 (七対子 / 50符1翻)
+  { fu: 30, han: 2, scale: null }, // 子:2000, 親:2900
+  { fu: 40, han: 2, scale: null }, // 子:2600, 親:3900
+  { fu: 25, han: 3, scale: null }, // 子:3200, 親:4800 (七対子3翻 / 50符2翻)
+  { fu: 30, han: 3, scale: null }, // 子:3900, 親:5800
+  { fu: 40, han: 3, scale: null }, // 子:5200, 親:7700
+  { fu: 25, han: 4, scale: null }, // 子:6400, 親:9600 (七対子4翻 / 50符3翻)
+  { fu: 30, han: 4, scale: null }, // 子:7700, 親:11600
+  { fu: 30, han: 5, scale: "mangan" },
+  { fu: 30, han: 6, scale: "hanman" },
+  { fu: 30, han: 8, scale: "baiman" },
+  { fu: 30, han: 11, scale: "sanbaiman" },
+  { fu: 30, han: 13, scale: "yakuman" },
+  { fu: 30, han: 26, scale: "double_yakuman" },
+];
+
+const SHORT_SCALE_LABELS: Record<Exclude<ManganScale, null>, string> = {
+  mangan: "満貫",
+  hanman: "跳満",
+  baiman: "倍満",
+  sanbaiman: "3倍満",
+  yakuman: "役満",
+  double_yakuman: "W役満",
+};
+
+/**
+ * 基準プレイヤー(base)が対象プレイヤー(target)を逆転するために必要な
+ * 「ツモ条件」と「直撃条件」をパターン①（満貫未満は点数表記、満貫以上は満貫〜W役満表記）で算出する
+ */
+export function calcComebackCondition(params: {
+  baseScore: number;
+  targetScore: number;
+  isBaseOya: boolean;
+  isTargetOya: boolean;
+  honbaCount: number;
+  kyotakuCount: number;
+  tableSize: number;
+  sanmaTsumo: "tsumozon" | "marutori";
+  canOvertakeOnTie: boolean;
+}): ComebackConditionResult {
+  const {
+    baseScore,
+    targetScore,
+    isBaseOya,
+    isTargetOya,
+    honbaCount,
+    kyotakuCount,
+    tableSize,
+    sanmaTsumo,
+    canOvertakeOnTie,
+  } = params;
+
+  const isAlreadyAhead = canOvertakeOnTie
+    ? baseScore >= targetScore
+    : baseScore > targetScore;
+
+  if (isAlreadyAhead) {
+    return {
+      isAhead: true,
+      tsumoLabel: "",
+      directRonLabel: "",
+    };
+  }
+
+  const kyotakuBonus = kyotakuCount * 1000;
+  const honbaTsumoUnit = honbaCount * 100;
+  const honbaRonTotal = honbaCount * 300;
+
+  // 1. ツモ条件の探索
+  let tsumoLabel = "W役満超";
+  for (const cand of TSUMO_CANDIDATES) {
+    const res = calcHandPoints(
+      isBaseOya,
+      "tsumo",
+      cand.scale,
+      cand.han,
+      cand.fu,
+      tableSize,
+      sanmaTsumo
+    );
+    const newBase =
+      baseScore +
+      res.pointsWinnerGets +
+      honbaTsumoUnit * (tableSize - 1) +
+      kyotakuBonus;
+    const targetLoss =
+      (isTargetOya ? res.pointsOyaPays : res.pointsKoPays) + honbaTsumoUnit;
+    const newTarget = targetScore - targetLoss;
+
+    const overtaken = canOvertakeOnTie
+      ? newBase >= newTarget
+      : newBase > newTarget;
+
+    if (overtaken) {
+      if (cand.scale !== null) {
+        tsumoLabel = SHORT_SCALE_LABELS[cand.scale];
+      } else if (isBaseOya) {
+        tsumoLabel = `${res.pointsKoPays}オール`;
+      } else {
+        tsumoLabel = `${res.pointsKoPays}/${res.pointsOyaPays}`;
+      }
+      break;
+    }
+  }
+
+  // 2. 直撃条件の探索
+  let directRonLabel = "W役満超";
+  for (const cand of RON_CANDIDATES) {
+    const res = calcHandPoints(
+      isBaseOya,
+      "ron",
+      cand.scale,
+      cand.han,
+      cand.fu,
+      tableSize,
+      sanmaTsumo
+    );
+    const newBase =
+      baseScore + res.pointsWinnerGets + honbaRonTotal + kyotakuBonus;
+    const newTarget = targetScore - (res.pointsWinnerGets + honbaRonTotal);
+
+    const overtaken = canOvertakeOnTie
+      ? newBase >= newTarget
+      : newBase > newTarget;
+
+    if (overtaken) {
+      if (cand.scale !== null) {
+        directRonLabel = SHORT_SCALE_LABELS[cand.scale];
+      } else {
+        directRonLabel = `${res.pointsWinnerGets}`;
+      }
+      break;
+    }
+  }
+
+  return {
+    isAhead: false,
+    tsumoLabel,
+    directRonLabel,
+  };
+}
+
+

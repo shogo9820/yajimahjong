@@ -1442,6 +1442,10 @@ body,
     border-radius: 8px;
     padding: clamp(2px, 0.8cqh, 5px) 4px;
     border: 1px solid rgba(255, 255, 255, 0.1);
+    min-height: clamp(28px, 8.2cqh, 38px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .seat-score-text {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -1766,6 +1770,12 @@ body,
   color: #fbbf24;
   font-size: 14px;
 }
+.score-diff-btn.score-mode-base-cond {
+  border-color: #a855f7;
+  background-color: rgba(168, 85, 247, 0.16);
+  color: #e9d5ff;
+  font-size: 13px;
+}
 .score-diff-btn.score-mode-plus {
   border-color: #38bdf8;
   background-color: rgba(56, 189, 248, 0.12);
@@ -1780,6 +1790,38 @@ body,
   border-color: #94a3b8;
   color: #cbd5e1;
 }
+.score-diff-btn.score-mode-cond {
+  border-color: #38bdf8;
+  background-color: rgba(15, 23, 42, 0.95);
+  font-size: 12px;
+  padding: 5px 8px;
+  white-space: nowrap;
+}
+.score-diff-btn.score-mode-ahead {
+  border-color: #34d399;
+  background-color: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  font-size: 13px;
+}
+
+.cond-inline-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.cond-badge-tsumo {
+  color: #38bdf8;
+  font-weight: 900;
+}
+.cond-badge-sep {
+  color: #64748b;
+  margin: 0 2px;
+  font-weight: 400;
+}
+.cond-badge-ron {
+  color: #fbbf24;
+  font-weight: 900;
+}
 
 .btn-score-edit-mini {
   background-color: #1e293b;
@@ -1791,7 +1833,7 @@ body,
   cursor: pointer;
 }
 
-/* 横持ち時の点差表示ハイライト */
+/* 横持ち時の点差・逆転条件表示ハイライト */
 .seat-score-row {
   cursor: pointer;
   transition: all 0.15s ease;
@@ -1800,9 +1842,26 @@ body,
   border-color: #fbbf24 !important;
   background-color: rgba(251, 191, 36, 0.16) !important;
 }
+.ls-score-mode-base-cond {
+  border-color: #a855f7 !important;
+  background-color: rgba(168, 85, 247, 0.18) !important;
+}
+.ls-score-mode-cond {
+  border-color: #38bdf8 !important;
+  background-color: rgba(15, 23, 42, 0.95) !important;
+}
+.ls-score-mode-ahead {
+  border-color: #34d399 !important;
+  background-color: rgba(16, 185, 129, 0.14) !important;
+}
 .ls-score-txt-base {
   color: #fbbf24 !important;
   font-size: clamp(16px, 5cqh, 22px) !important;
+}
+.ls-score-txt-base-cond {
+  color: #e9d5ff !important;
+  font-size: clamp(14px, 4.4cqh, 19px) !important;
+  letter-spacing: 0.5px !important;
 }
 .ls-score-txt-plus {
   color: #38bdf8 !important;
@@ -1812,6 +1871,20 @@ body,
 }
 .ls-score-txt-zero {
   color: #cbd5e1 !important;
+}
+.ls-score-txt-ahead {
+  color: #34d399 !important;
+  font-size: clamp(14px, 4.4cqh, 19px) !important;
+  letter-spacing: 0.5px !important;
+}
+.ls-score-txt-cond {
+  font-size: clamp(11.5px, 3.6cqh, 15.5px) !important;
+  letter-spacing: 0 !important;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-shadow: none !important;
 }
 
 /* ダブロン時の和了者別手役切り替えタブ */

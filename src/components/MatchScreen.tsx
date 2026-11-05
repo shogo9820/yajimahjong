@@ -8,7 +8,11 @@ import {
   WIND_LABELS,
   WinnerHandConfig,
 } from "../types";
-import { calcHandPoints, formatHandShortLabel } from "../utils/scoreCalc";
+import {
+  calcComebackCondition,
+  calcHandPoints,
+  formatHandShortLabel,
+} from "../utils/scoreCalc";
 
 interface MatchScreenProps {
   activePlayers: number[];
@@ -84,8 +88,11 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
   } | null>(null);
   const touchMovedRef = useRef(false);
 
-  // 🎯 点数タップ時の「3秒間 他プレイヤーとの点差表示」用State
+  // 🎯 点数タップ時の「1回タップ＝点差表示 ／ 2回連続タップ＝逆転条件表示」用State
   const [diffBasePlayerId, setDiffBasePlayerId] = useState<number | null>(null);
+  const [diffViewMode, setDiffViewMode] = useState<"diff" | "condition">(
+    "diff"
+  );
   const diffTimerRef = useRef<number | null>(null);
 
   // 🎯 ダブロン時にどの和了者の手役（符・翻・満貫）を編集しているか
@@ -180,16 +187,38 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
     }
   };
 
-  // 点数を押した時に3秒間だけ他プレイヤーとの点差を表示する
+  // 点数を1回押すと点差表示、表示中にもう1回押すと逆転条件（ツモ・直撃）表示に切り替え
   const handleScoreBoxClick = (playerId: number) => {
     if (diffTimerRef.current !== null) {
       window.clearTimeout(diffTimerRef.current);
+      diffTimerRef.current = null;
     }
+
+    if (diffBasePlayerId === playerId) {
+      if (diffViewMode === "diff") {
+        // 2回目タップ：逆転条件モードへ切り替え（じっくり読めるよう5秒間表示）
+        setDiffViewMode("condition");
+        diffTimerRef.current = window.setTimeout(() => {
+          setDiffBasePlayerId(null);
+          setDiffViewMode("diff");
+          diffTimerRef.current = null;
+        }, 5000);
+      } else {
+        // 3回目タップ：通常表示へ即座に戻す
+        setDiffBasePlayerId(null);
+        setDiffViewMode("diff");
+      }
+      return;
+    }
+
+    // 1回目タップ（または別プレイヤーの点数をタップ）：点差モードで表示
     setDiffBasePlayerId(playerId);
+    setDiffViewMode("diff");
     diffTimerRef.current = window.setTimeout(() => {
       setDiffBasePlayerId(null);
+      setDiffViewMode("diff");
       diffTimerRef.current = null;
-    }, 3000);
+    }, 3500);
   };
 
   const handleScoreManualEditPrompt = (
@@ -210,26 +239,87 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
     }
   };
 
-  // 点数または点差の表示文字列・クラスを算出
+  // 点数・点差・逆転条件の表示情報を算出
   const getScoreDisplayInfo = (playerId: number, rawScore: number) => {
     if (diffBasePlayerId === null) {
       return {
         text: rawScore.toLocaleString(),
         mode: "normal" as const,
+        tsumoLabel: "",
+        directRonLabel: "",
       };
     }
+
     if (playerId === diffBasePlayerId) {
+      if (diffViewMode === "condition") {
+        return {
+          text: `逆転基準 ${rawScore.toLocaleString()}`,
+          mode: "base-cond" as const,
+          tsumoLabel: "",
+          directRonLabel: "",
+        };
+      }
       return {
         text: `基準 ${rawScore.toLocaleString()}`,
         mode: "base" as const,
+        tsumoLabel: "",
+        directRonLabel: "",
       };
     }
+
     const baseScore = currentPoints[diffBasePlayerId] ?? startPoints;
     const diff = rawScore - baseScore;
     const sign = diff > 0 ? "+" : diff < 0 ? "" : "±";
+
+    if (diffViewMode === "diff") {
+      return {
+        text: `${sign}${diff.toLocaleString()}`,
+        mode:
+          diff > 0
+            ? ("plus" as const)
+            : diff < 0
+            ? ("minus" as const)
+            : ("zero" as const),
+        tsumoLabel: "",
+        directRonLabel: "",
+      };
+    }
+
+    // 逆転条件モード（案3・パターン①：ツモ＆直撃の2項目）
+    const baseSeatIdx = activePlayers.indexOf(diffBasePlayerId);
+    const targetSeatIdx = activePlayers.indexOf(playerId);
+    const canOvertakeOnTie =
+      rules.tieBreaker === "kamicha" &&
+      baseSeatIdx !== -1 &&
+      targetSeatIdx !== -1 &&
+      baseSeatIdx < targetSeatIdx;
+
+    const cond = calcComebackCondition({
+      baseScore,
+      targetScore: rawScore,
+      isBaseOya: diffBasePlayerId === currentOyaId,
+      isTargetOya: playerId === currentOyaId,
+      honbaCount,
+      kyotakuCount,
+      tableSize,
+      sanmaTsumo: rules.sanmaTsumo,
+      canOvertakeOnTie,
+    });
+
+    if (cond.isAhead) {
+      return {
+        text: `先行 (${sign}${diff.toLocaleString()})`,
+        mode: "ahead" as const,
+        tsumoLabel: "",
+        directRonLabel: "",
+      };
+    }
+
     return {
-      text: `${sign}${diff.toLocaleString()}`,
-      mode: diff > 0 ? ("plus" as const) : diff < 0 ? ("minus" as const) : ("zero" as const),
+      text: `ツモ${cond.tsumoLabel} / 直${cond.directRonLabel}`,
+      mode: "cond" as const,
+      tsumoLabel: cond.tsumoLabel,
+      directRonLabel: cond.directRonLabel,
     };
   };
 
@@ -782,7 +872,7 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
                 fontSize: "11px",
               }}
             >
-              現在の持ち点（点数タップで3秒間点差表示 / ✎で手入力修正）
+              現在の持ち点（1回タップ:点差 / 2回タップ:逆転条件 / ✎:手入力）
             </div>
             <div id="match-players-list" className="table-rows">
               {activePlayers.slice(0, tableSize).map((pId, idx) => {
@@ -839,9 +929,21 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
                         id={`match-pt-${pId}`}
                         onClick={() => handleScoreBoxClick(pId)}
                         className={`score-diff-btn score-mode-${disp.mode}`}
-                        title="タップして3秒間このプレイヤー基準の点差を表示"
+                        title="1回タップで点差表示、もう1回タップで逆転条件を表示"
                       >
-                        {disp.text}
+                        {disp.mode === "cond" ? (
+                          <span className="cond-inline-wrap">
+                            <span className="cond-badge-tsumo">
+                              ツモ {disp.tsumoLabel}
+                            </span>
+                            <span className="cond-badge-sep">/</span>
+                            <span className="cond-badge-ron">
+                              直 {disp.directRonLabel}
+                            </span>
+                          </span>
+                        ) : (
+                          disp.text
+                        )}
                       </button>
                       <button
                         type="button"
@@ -1194,13 +1296,25 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
                   <div
                     className={`seat-score-row ls-score-mode-${disp.mode}`}
                     onClick={() => handleScoreBoxClick(pId)}
-                    title="タップして3秒間このプレイヤーとの点差を表示"
+                    title="1回タップで点差表示、もう1回タップで逆転条件を表示"
                   >
-                    <span
-                      className={`seat-score-text ls-score-txt-${disp.mode}`}
-                    >
-                      {disp.text}
-                    </span>
+                    {disp.mode === "cond" ? (
+                      <span className="seat-score-text ls-score-txt-cond">
+                        <span className="cond-badge-tsumo">
+                          ツモ {disp.tsumoLabel}
+                        </span>
+                        <span className="cond-badge-sep">｜</span>
+                        <span className="cond-badge-ron">
+                          直 {disp.directRonLabel}
+                        </span>
+                      </span>
+                    ) : (
+                      <span
+                        className={`seat-score-text ls-score-txt-${disp.mode}`}
+                      >
+                        {disp.text}
+                      </span>
+                    )}
                   </div>
                   <div
                     className={`riichi-stick ${isRiichi ? "" : "hidden"}`}

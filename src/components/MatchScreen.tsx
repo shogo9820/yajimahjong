@@ -82,14 +82,23 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
 
   const startPoints = parseInt(rules.points.split("-")[0], 10) || 25000;
 
-  const assignToRole = (playerId: number, role: "winner" | "loser") => {
+  const assignToRole = (
+    playerId: number,
+    role: "winner" | "loser",
+    toggleIfTenpai = false
+  ) => {
     if (role === "winner") {
       if (matchCalc.type === "tenpai") {
         const exists = matchCalc.winners.includes(playerId);
-        const nextWinners = exists
-          ? matchCalc.winners.filter((id) => id !== playerId)
-          : [...matchCalc.winners, playerId];
-        onUpdateMatchCalc({ winners: nextWinners });
+        if (exists) {
+          if (toggleIfTenpai && !riichiPlayers.includes(playerId)) {
+            onUpdateMatchCalc({
+              winners: matchCalc.winners.filter((id) => id !== playerId),
+            });
+          }
+        } else {
+          onUpdateMatchCalc({ winners: [...matchCalc.winners, playerId] });
+        }
       } else {
         onUpdateMatchCalc({ winners: [playerId] });
       }
@@ -103,7 +112,7 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
   const handlePlayerChipTap = (playerId: number) => {
     if (touchMovedRef.current) return;
     if (matchCalc.type === "tenpai") {
-      assignToRole(playerId, "winner");
+      assignToRole(playerId, "winner", true);
     } else if (matchCalc.type === "tsumo") {
       assignToRole(playerId, "winner");
     } else {
@@ -121,7 +130,7 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
   const handleSetAgariType = (type: AgariType) => {
     onUpdateMatchCalc({
       type,
-      winners: [],
+      winners: type === "tenpai" ? [...riichiPlayers] : [],
       loser: null,
       scale: null,
     });
@@ -210,20 +219,28 @@ export const MatchScreen: React.FC<MatchScreenProps> = ({
   ) => {
     if (role === "winner") {
       if (matchCalc.winners.length === 0) return placeholder;
-      return matchCalc.winners.map((pId) => (
-        <div
-          key={pId}
-          className="match-player-chip"
-          style={{ margin: "2px" }}
-          onClick={() =>
-            onUpdateMatchCalc({
-              winners: matchCalc.winners.filter((id) => id !== pId),
-            })
-          }
-        >
-          {getPlayerName(pId)}
-        </div>
-      ));
+      return matchCalc.winners.map((pId) => {
+        const isLockedRiichi =
+          matchCalc.type === "tenpai" && riichiPlayers.includes(pId);
+        return (
+          <div
+            key={pId}
+            className="match-player-chip"
+            style={{
+              margin: "2px",
+              borderColor: isLockedRiichi ? "#fbbf24" : undefined,
+            }}
+            onClick={() => {
+              if (isLockedRiichi) return;
+              onUpdateMatchCalc({
+                winners: matchCalc.winners.filter((id) => id !== pId),
+              });
+            }}
+          >
+            {getPlayerName(pId)}
+          </div>
+        );
+      });
     } else {
       if (matchCalc.loser === null) return placeholder;
       return (

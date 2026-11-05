@@ -491,6 +491,16 @@ export const App: React.FC = () => {
       kyotakuCount: prev.kyotakuCount + 1,
       riichiPlayers: [...prev.riichiPlayers, playerId],
     }));
+
+    setMatchCalc((prev) => {
+      if (prev.type === "tenpai" && !prev.winners.includes(playerId)) {
+        return {
+          ...prev,
+          winners: [...prev.winners, playerId],
+        };
+      }
+      return prev;
+    });
   };
 
   const handleManualScoreChange = (playerId: number, score: number) => {
